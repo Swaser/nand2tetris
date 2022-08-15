@@ -38,6 +38,51 @@ CHIP CPU {
         addressM[15],    // Address in data memory (of M)
         pc[15];          // address of next instruction
 
+	// A instruction
+	// 0xxx xxxx xxxx xxxx
+	
+	// C instruction
+	// 111accccccdddjjj
+	// FEDCBA9876543210
+
+
     PARTS:
-    // Put your code here:
+		
+		DRegister(in=AluOut,out=DregOut,load=instruction[4]);
+		
+		// if A instruction then content goes into A register
+		Mux16(a=instruction,b=AluOut,sel=instruction[15],out=AregIn);
+		
+		// if A instruction or instruction[5] then load A register
+		Not(in=instruction[15],out=isAinstr);
+		Or(a=isAinstr,b=instruction[5],out=loadAreg);
+		ARegister(in=AregIn,out=AregOut,out[0..14]=addressM,load=loadAreg);
+		
+		// take either A register or memory for y argument into ALU (depending on a bit)
+		Mux16(a=AregOut,b=inM,sel=instruction[12],out=yAluIn);
+		
+		ALU(x=DregOut,y=yAluIn,out=AluOut,out=outM,zr=zr,ng=ng,zx=instruction[11],nx=instruction[10],zy=instruction[9],ny=instruction[8],f=instruction[7],no=instruction[6]);
+		
+		
+		DMux8Way(in=instruction[15],sel=instruction[0..2],a=null, b=gtz, c=eqz, d=gez, e=ltz, f=nez, g=lez, h=uncond);
+		Not(in=zr,out=notZr);
+		Not(in=ng,out=notNg);
+		And(a=notZr,b=notNg,out=positive);
+		
+		And(a=false,b=null,out=jnot);
+		And(a=positive,b=gtz,out=jgt);
+		And(a=zr,b=eqz,out=jeq);
+		And(a=notNg,b=gez,out=jge);
+		And(a=ng,b=ltz,out=jlt);
+		And(a=notZr,b=nez,out=jne);
+		Or(a=zr,b=ng,out=lessOrEqual);
+		And(a=lessOrEqual,b=lez,out=jle);
+		And(a=true,b=uncond,out=jalways);
+		
+		Or8Way(in[0]=jnot,in[1]=jgt,in[2]=jeq,in[3]=jge,in[4]=jlt,in[5]=jne,in[6]=jle,in[7]=jalways,out=jump);
+		Not(in=jump,out=noJump);
+		PC(reset=reset,inc=noJump,load=jump,in=AregOut,out[0..14]=pc);
+		
+		// write ALU output if least significant d bit is set
+		And(a=instruction[15],b=instruction[3],out=writeM);
 }
