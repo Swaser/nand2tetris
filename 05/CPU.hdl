@@ -63,7 +63,6 @@ CHIP CPU {
 		
 		ALU(x=DregOut,y=yAluIn,out=AluOut,out=outM,zr=zr,ng=ng,zx=instruction[11],nx=instruction[10],zy=instruction[9],ny=instruction[8],f=instruction[7],no=instruction[6]);
 		
-		
 		DMux8Way(in=instruction[15],sel=instruction[0..2],a=null, b=gtz, c=eqz, d=gez, e=ltz, f=nez, g=lez, h=uncond);
 		Not(in=zr,out=notZr);
 		Not(in=ng,out=notNg);
