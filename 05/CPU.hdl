@@ -48,12 +48,14 @@ CHIP CPU {
 
     PARTS:
 		
-		DRegister(in=AluOut,out=DregOut,load=instruction[4]);
+		// if C instruction (most significant bit set) then load D register when fifth bit of instruction is set
+		And(a=instruction[15],b=instruction[4],out=loadDreg);
+		DRegister(in=AluOut,out=DregOut,load=loadDreg);
 		
 		// if A instruction then content goes into A register
 		Mux16(a=instruction,b=AluOut,sel=instruction[15],out=AregIn);
 		
-		// if A instruction or instruction[5] then load A register
+		// if A instruction or instruction[5] (and not A instruction) then load A register
 		Not(in=instruction[15],out=isAinstr);
 		Or(a=isAinstr,b=instruction[5],out=loadAreg);
 		ARegister(in=AregIn,out=AregOut,out[0..14]=addressM,load=loadAreg);
