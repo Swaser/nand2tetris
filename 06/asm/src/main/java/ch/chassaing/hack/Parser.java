@@ -3,11 +3,12 @@ package ch.chassaing.hack;
 import ch.chassaing.hack.instruction.*;
 import org.apache.commons.lang3.StringUtils;
 
-import static ch.chassaing.hack.Result.error;
+import java.util.Objects;
+
+import static ch.chassaing.hack.Result.none;
 import static ch.chassaing.hack.Result.success;
 import static java.util.Objects.requireNonNull;
 import static org.apache.commons.lang3.StringUtils.removeStart;
-import static org.apache.commons.lang3.StringUtils.trim;
 
 public final class Parser
 {
@@ -18,7 +19,7 @@ public final class Parser
         requireNonNull(line);
         String trimmed = StringUtils.trim(line);
         if (StringUtils.isBlank(trimmed) || trimmed.startsWith("//")) {
-            return null;
+            return none();
         }
 
         if (trimmed.startsWith("@")) {
@@ -36,18 +37,17 @@ public final class Parser
             return Result.error("Line contains neither destination nor jump: " + line);
         }
         String compString = trimmed
-                .substring(equals + 1, semicolon != -1 ? semicolon : trimmed.length()); // +1 because inclusive
+                .substring(equals + 1,  // +1 because inclusive and we don't want the =
+                           semicolon != -1 ? semicolon : trimmed.length());
 
         return getComputation(compString)
                 .flatMap(comp -> getDestination(line)
                         .flatMap(dest -> getJump(line)
                                 .map(jump -> new CInstruction(dest, comp, jump))));
-
     }
 
     private static Result<Destination> getDestination(String line)
     {
-
         for (Destination dest : Destination.values()) {
             if (dest.match.test(line)) {
                 return Result.success(dest);
@@ -70,6 +70,11 @@ public final class Parser
 
     private static Result<Computation> getComputation(String compString)
     {
-        return null;
+        for (Computation comp : Computation.values()) {
+            if (Objects.equals(comp.stringRep,compString)) {
+                return Result.success(comp);
+            }
+        }
+        return Result.error("Cannot determine computation in: " + compString);
     }
 }

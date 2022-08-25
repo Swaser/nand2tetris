@@ -1,5 +1,8 @@
 package ch.chassaing.hack;
 
+import io.vavr.collection.List;
+
+import java.util.Iterator;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -9,6 +12,7 @@ import static java.util.Objects.requireNonNull;
  * A success value cannot be null.
  */
 public sealed interface Result<T>
+    extends Iterable<T>
 {
     @SuppressWarnings("rawtypes")
     Result NONE = new None();
@@ -36,6 +40,7 @@ public sealed interface Result<T>
     {
         return new Success<>(value);
     }
+
     record None<T>() implements Result<T> {
 
         @Override
@@ -48,6 +53,12 @@ public sealed interface Result<T>
         public <U> Result<U> map(Function<T, U> mapper)
         {
             return none();
+        }
+
+        @Override
+        public Iterator<T> iterator()
+        {
+            return List.<T>empty().iterator();
         }
     }
 
@@ -62,6 +73,12 @@ public sealed interface Result<T>
         public <U> Result<U> map(Function<T, U> mapper)
         {
             return error(reason);
+        }
+
+        @Override
+        public Iterator<T> iterator()
+        {
+            throw new IllegalStateException("iterator() on error Result called");
         }
     }
 
@@ -96,6 +113,12 @@ public sealed interface Result<T>
         {
             requireNonNull(mapper);
             return success(mapper.apply(value));
+        }
+
+        @Override
+        public Iterator<T> iterator()
+        {
+            return Iterators.singleElement(value);
         }
     }
 }
