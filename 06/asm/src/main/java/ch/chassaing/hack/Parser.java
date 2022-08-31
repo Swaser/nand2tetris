@@ -23,10 +23,15 @@ public final class Parser
         }
 
         if (trimmed.startsWith("@")) {
-            return success(new Constant(removeStart(trimmed, "@")));
+            String chars = removeStart(trimmed, "@");
+            if (StringUtils.isNumeric(chars)) {
+                return success(new Constant(chars));
+            } else {
+                // TODO check conformity to syntax
+                
+            }
         }
 
-        // line is not blank
         // must be C-instruction
 
         // cut out the computation part ddd=ccc;jjj
