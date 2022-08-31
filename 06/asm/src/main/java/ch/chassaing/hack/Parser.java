@@ -4,14 +4,19 @@ import ch.chassaing.hack.instruction.*;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-import static ch.chassaing.hack.Result.none;
-import static ch.chassaing.hack.Result.success;
+import static ch.chassaing.hack.Result.*;
 import static java.util.Objects.requireNonNull;
 import static org.apache.commons.lang3.StringUtils.removeStart;
 
 public final class Parser
 {
+
+    public static final Pattern SYMBOL_PATTERN = Pattern.compile("[a-zA-z_.$:][a-zA-z0-9_.$:]*");
+    public static final Pattern VIRTUAL_REGISTER = Pattern.compile("R(\\d\\d?)");
+
     private Parser() { /* do not instantiate */ }
 
     public static Result<Instruction> parseLine(String line)
@@ -27,8 +32,21 @@ public final class Parser
             if (StringUtils.isNumeric(chars)) {
                 return success(new Constant(chars));
             } else {
-                // TODO check conformity to syntax
-                
+                if (!SYMBOL_PATTERN.matcher(chars).matches()) {
+                    return error("Symbols must not start with a digit.");
+                }
+                Matcher virtualRegisterMatcher = VIRTUAL_REGISTER.matcher(chars);
+                if (virtualRegisterMatcher.matches()) {
+                    int register = Integer.parseInt(virtualRegisterMatcher.group(1));
+                    if (register <= 15) {
+                        return success(new Constant(virtualRegisterMatcher.group(1)));
+                    }
+                }
+                return switch (chars) {
+                    case "SCREEN" -> success(new Constant("16348"));
+                    case "KBD" -> success(new Constant("16348"));
+                    default -> throw new IllegalStateException("Unexpected value: " + chars);
+                };
             }
         }
 
