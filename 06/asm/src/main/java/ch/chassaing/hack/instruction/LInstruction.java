@@ -7,18 +7,19 @@ import java.math.BigInteger;
 
 import static java.util.Objects.requireNonNull;
 
-public record Constant(BigInteger value)
-        implements AInstruction
+public record LInstruction(String loopIndicator)
+    implements Instruction
 {
-
-    public Constant
+    public LInstruction
     {
-        requireNonNull(value);
+        requireNonNull(loopIndicator);
     }
 
     @Override
     public MachineInstruction toMachineInstruction(SymbolTable symbolTable)
     {
-        return MachineInstruction.fromBigInteger(value);
+        requireNonNull(symbolTable);
+        BigInteger loopAddress = symbolTable.symbolAddress(loopIndicator);
+        return MachineInstruction.fromBigInteger(loopAddress);
     }
 }

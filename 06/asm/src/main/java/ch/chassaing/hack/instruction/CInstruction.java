@@ -1,5 +1,8 @@
 package ch.chassaing.hack.instruction;
 
+import ch.chassaing.hack.MachineInstruction;
+import ch.chassaing.hack.SymbolTable;
+
 import java.util.BitSet;
 
 public record CInstruction(Destination dest,
@@ -8,9 +11,8 @@ public record CInstruction(Destination dest,
         implements Instruction
 {
     @Override
-    public byte[] toMachineInstruction()
+    public MachineInstruction toMachineInstruction(SymbolTable symbolTable)
     {
-
         BitSet bitSet = new BitSet(16);
         int i=0;
         for (boolean bit : jump.bits) {
@@ -25,8 +27,9 @@ public record CInstruction(Destination dest,
         bitSet.set(i++, comp.aBit);
         bitSet.set(i++, true);
         bitSet.set(i++, true);
-        bitSet.set(i++, true);
+        bitSet.set(i, true);
 
-        return bitSet.toByteArray();
+        byte[] bytes = bitSet.toByteArray();
+        return new MachineInstruction(bytes[0],bytes[1]);
     }
 }

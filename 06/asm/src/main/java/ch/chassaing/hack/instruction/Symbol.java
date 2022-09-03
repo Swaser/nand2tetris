@@ -1,8 +1,21 @@
 package ch.chassaing.hack.instruction;
 
-public final class Symbol implements AInstruction {
+import ch.chassaing.hack.MachineInstruction;
+import ch.chassaing.hack.SymbolTable;
+
+import static java.util.Objects.requireNonNull;
+
+public record Symbol(String chars)
+        implements AInstruction
+{
+    public Symbol
+    {
+        requireNonNull(chars);
+    }
+
     @Override
-    public byte[] toMachineInstruction() {
-        return new byte[0];
+    public MachineInstruction toMachineInstruction(SymbolTable symbolTable)
+    {
+        return MachineInstruction.fromBigInteger(symbolTable.symbolAddress(chars));
     }
 }
