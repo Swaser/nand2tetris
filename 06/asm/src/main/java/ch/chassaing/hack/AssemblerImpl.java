@@ -2,14 +2,18 @@ package ch.chassaing.hack;
 
 import ch.chassaing.hack.instruction.Instruction;
 import ch.chassaing.hack.instruction.LInstruction;
+import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.collection.Seq;
+import io.vavr.control.Option;
 import org.apache.commons.io.IOUtils;
 
 import java.io.*;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.function.BiConsumer;
 
 import static java.util.Objects.requireNonNull;
@@ -47,14 +51,14 @@ public final class AssemblerImpl
         String outFilename = filename.replace(".asm", ".hack");
         try (FileOutputStream fos = new FileOutputStream(outFilename, false)) {
             boolean success = transform(lines,
-                                          fos,
-                                          (severity, message) -> {
-                                              if (severity == MessageSeverity.ERROR) {
-                                                  System.err.println(message);
-                                              } else {
-                                                  System.out.println(message);
-                                              }
-                                          });
+                                        fos,
+                                        (severity, message) -> {
+                                            if (severity == MessageSeverity.ERROR) {
+                                                System.err.println(message);
+                                            } else {
+                                                System.out.println(message);
+                                            }
+                                        });
 
             if (!success) {
                 System.out.println("Generation of hack file failed.");
@@ -137,10 +141,22 @@ public final class AssemblerImpl
     private Seq<Result<Instruction>> translate(Seq<String> lines)
     {
         requireNonNull(lines);
-
-        Seq<Result<Instruction>> results = lines.map(parser::parseLine);
-
-        Seq<Tuple2<Result<Instruction>, Integer>> numberedInstructions = results.zipWithIndex();
+        Set<String> loopNames = new HashSet<>();
+        Seq<Tuple2<Result<Instruction>, Integer>> numberedInstructions = lines
+                .map(parser::parseLine)
+                .zipWithIndex()
+                .map(tuple -> {
+                    // check for duplicate loop declarations
+                    if (tuple._1 instanceof Result.Success<Instruction> success &&
+                        success.value() instanceof LInstruction lInstruction) {
+                        if (loopNames.contains(lInstruction.loopIndicator())) {
+                            return Tuple.of(Result.error("Duplicate loop declaration " + lInstruction.loopIndicator()), tuple._2);
+                        } else {
+                            loopNames.add(lInstruction.loopIndicator());
+                        }
+                    }
+                    return tuple;
+                });
 
         for (Tuple2<Result<Instruction>, Integer> numberedInstruction : numberedInstructions) {
             if (numberedInstruction._1 instanceof Result.Error<Instruction> error) {
@@ -148,6 +164,6 @@ public final class AssemblerImpl
             }
         }
 
-        return results;
+        return numberedInstructions.map(Tuple2::_1);
     }
 }
