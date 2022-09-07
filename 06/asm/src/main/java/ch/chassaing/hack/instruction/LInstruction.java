@@ -18,8 +18,6 @@ public record LInstruction(String loopIndicator)
     @Override
     public MachineInstruction toMachineInstruction(SymbolTable symbolTable)
     {
-        requireNonNull(symbolTable);
-        BigInteger loopAddress = symbolTable.symbolAddress(loopIndicator);
-        return MachineInstruction.fromBigInteger(loopAddress);
+        throw new UnsupportedOperationException("LInstructions cannot be converted to MachineInstructions");
     }
 }

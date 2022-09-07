@@ -11,7 +11,7 @@ public record CInstruction(Destination dest,
         implements Instruction
 {
     @Override
-    public MachineInstruction toMachineInstruction(SymbolTable symbolTable)
+    public MachineInstruction toMachineInstruction(SymbolTable unused)
     {
         BitSet bitSet = new BitSet(16);
         int i=0;
@@ -29,7 +29,7 @@ public record CInstruction(Destination dest,
         bitSet.set(i++, true);
         bitSet.set(i, true);
 
-        byte[] bytes = bitSet.toByteArray();
+        byte[] bytes = bitSet.toByteArray(); // BitSet.toByteArray() is little endian
         return new MachineInstruction(bytes[0],bytes[1]);
     }
 }

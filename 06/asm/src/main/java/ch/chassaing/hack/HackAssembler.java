@@ -6,7 +6,6 @@ import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.collection.List;
 import io.vavr.collection.Seq;
-import io.vavr.control.Option;
 import org.apache.commons.io.IOUtils;
 
 import java.io.*;
@@ -18,12 +17,12 @@ import java.util.function.BiConsumer;
 
 import static java.util.Objects.requireNonNull;
 
-public final class AssemblerImpl
+public final class HackAssembler
         implements Assembler
 {
     private final Parser parser;
 
-    public AssemblerImpl(Parser parser)
+    public HackAssembler(Parser parser)
     {
         this.parser = parser;
     }
@@ -31,7 +30,7 @@ public final class AssemblerImpl
     public static void main(String[] args)
     {
         if (args.length != 1) {
-            System.out.println("Usage: " + AssemblerImpl.class.getSimpleName() + " assemblerfile");
+            System.out.println("Usage: " + HackAssembler.class.getSimpleName() + " assemblerfile");
             System.exit(64);
         }
 
@@ -41,7 +40,7 @@ public final class AssemblerImpl
             System.exit(64);
         }
 
-        new AssemblerImpl(new ParserImpl()).process(filename);
+        new HackAssembler(new ParserImpl()).process(filename);
     }
 
     private void process(String filename)
@@ -107,6 +106,9 @@ public final class AssemblerImpl
         // second pass: generate machine code
         for (Result<Instruction> instructionResult : translateResult) {
             if (instructionResult instanceof Result.Success<Instruction> success) {
+                if (success.value() instanceof LInstruction) {
+                    continue;
+                }
                 Instruction instruction = success.value();
                 MachineInstruction machineInstruction = instruction.toMachineInstruction(symbolTable);
                 // low byte first = little endian
@@ -158,9 +160,9 @@ public final class AssemblerImpl
                     return tuple;
                 });
 
-        for (Tuple2<Result<Instruction>, Integer> numberedInstruction : numberedInstructions) {
-            if (numberedInstruction._1 instanceof Result.Error<Instruction> error) {
-                System.out.println("" + numberedInstruction._2 + " : " + error.reason());
+        for (Tuple2<Result<Instruction>, Integer> tuple : numberedInstructions) {
+            if (tuple._1 instanceof Result.Error<Instruction> error) {
+                System.out.println("" + tuple._2 + " : " + error.reason());
             }
         }
 

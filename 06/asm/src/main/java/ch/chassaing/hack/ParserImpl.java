@@ -23,6 +23,13 @@ public final class ParserImpl
     public Result<Instruction> parseLine(String line)
     {
         requireNonNull(line);
+
+        int comment = line.indexOf("//");
+        if (comment > 0) {
+            // cut away the comment
+            line = line.substring(0, comment);
+        }
+
         String trimmed = StringUtils.trim(line);
 
         if (StringUtils.isBlank(trimmed) || trimmed.startsWith("//")) {
@@ -91,8 +98,8 @@ public final class ParserImpl
                            semicolon != -1 ? semicolon : trimmed.length());
 
         return getComputation(compString)
-                .flatMap(comp -> getDestination(line)
-                        .flatMap(dest -> getJump(line)
+                .flatMap(comp -> getDestination(trimmed)
+                        .flatMap(dest -> getJump(trimmed)
                                 .map(jump -> new CInstruction(dest, comp, jump))));
     }
 

@@ -3,8 +3,8 @@ package ch.chassaing.hack;
 import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 
+import static java.lang.System.out;
 import static java.util.Objects.isNull;
 
 /**
@@ -45,6 +45,7 @@ public final class SymbolTableImpl
             throw new IllegalStateException("Duplicate symbol");
         }
         symbolMap.put(symbol, address);
+        out.printf("%s got address %d%n", symbol, address.longValue());
     }
 
     @Override
@@ -56,7 +57,7 @@ public final class SymbolTableImpl
                 throw new IllegalStateException("Too many symbols");
             }
             result = BigInteger.valueOf(nextFree++);
-            symbolMap.put(symbol, result);
+            putAddress(symbol, result);
         }
         return result;
     }

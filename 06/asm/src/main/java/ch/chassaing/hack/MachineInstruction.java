@@ -10,7 +10,7 @@ public record MachineInstruction(byte loByte,
     public static MachineInstruction fromBigInteger(BigInteger address)
     {
         requireNonNull(address);
-        byte[] bytes = address.toByteArray();
+        byte[] bytes = address.toByteArray(); // BigInteger.toByteArray() is big endian
         if (bytes.length > 2) {
             throw new IllegalArgumentException("Address must not be longer than 16 bit");
         } else if (bytes.length == 2) {
