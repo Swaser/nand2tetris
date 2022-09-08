@@ -6,11 +6,11 @@ import ch.chassaing.hack.SymbolTable;
 /**
  * An expression that will be converted into machine language
  */
-public abstract class InstructionExpression
+public abstract class Instruction
         extends Expression
 {
-    protected InstructionExpression(int lineNumber,
-                                    String line)
+    protected Instruction(int lineNumber,
+                          String line)
     {
         super(lineNumber, line);
     }

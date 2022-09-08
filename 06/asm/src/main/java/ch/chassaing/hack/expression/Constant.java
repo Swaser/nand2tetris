@@ -8,7 +8,7 @@ import java.math.BigInteger;
 import static java.util.Objects.requireNonNull;
 
 public final class Constant
-        extends AddressExpression
+        extends Address
 {
     private final BigInteger value;
 

@@ -6,7 +6,7 @@ import ch.chassaing.hack.SymbolTable;
 import static java.util.Objects.requireNonNull;
 
 public final class Symbol
-        extends AddressExpression
+        extends Address
 {
     private final String chars;
 

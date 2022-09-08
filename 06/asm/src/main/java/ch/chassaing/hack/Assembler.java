@@ -8,9 +8,15 @@ import java.util.function.BiConsumer;
 
 public interface Assembler
 {
-    enum MessageSeverity
+    interface Feedback
     {
-        DEBUG, INFO, ERROR
+        void onDebug(int lineNumber, String line, String details);
+
+        void onInfo(int lineNumber, String line, String details);
+
+        void onError(int lineNumber, String line, String details);
+
+        void general(String text);
     }
 
     /**
@@ -26,6 +32,6 @@ public interface Assembler
      */
     boolean transform(Seq<String> lines,
                       OutputStream machineCodeOutput,
-                      BiConsumer<MessageSeverity, CharSequence> messageConsumer)
+                      Feedback feedback)
             throws IOException;
 }

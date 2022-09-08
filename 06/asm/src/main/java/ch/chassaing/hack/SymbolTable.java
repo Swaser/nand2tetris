@@ -7,4 +7,6 @@ public interface SymbolTable
     void putAddress(String symbol, BigInteger address);
 
     BigInteger symbolAddress(String symbol);
+
+    boolean hasSymbol(String symbol);
 }

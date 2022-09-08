@@ -90,7 +90,7 @@ public final class ParserImpl
         }
 
         String label = removeEnd(removeStart(trimmed, "("), ")");
-        return new LabelExpression(lineNumber, line, label);
+        return new Label(lineNumber, line, label);
     }
 
     private Expression parseCInstruction(int lineNumber,

@@ -6,6 +6,7 @@ import java.util.Map;
 
 import static java.lang.System.out;
 import static java.util.Objects.isNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * NOT threadsafe
@@ -41,7 +42,8 @@ public final class SymbolTableImpl
     @Override
     public void putAddress(String symbol, BigInteger address)
     {
-        if (symbolMap.containsKey(symbol)) {
+        requireNonNull(address);
+        if (symbolMap.containsKey(requireNonNull(symbol))) {
             throw new IllegalStateException("Duplicate symbol");
         }
         symbolMap.put(symbol, address);
@@ -51,7 +53,7 @@ public final class SymbolTableImpl
     @Override
     public BigInteger symbolAddress(String symbol)
     {
-        BigInteger result = symbolMap.get(symbol);
+        BigInteger result = symbolMap.get(requireNonNull(symbol));
         if (isNull(result)) {
             if (nextFree >= SCREEN_ADDRESS) {
                 throw new IllegalStateException("Too many symbols");
@@ -60,5 +62,11 @@ public final class SymbolTableImpl
             putAddress(symbol, result);
         }
         return result;
+    }
+
+    @Override
+    public boolean hasSymbol(String symbol)
+    {
+        return symbolMap.containsKey(requireNonNull(symbol));
     }
 }

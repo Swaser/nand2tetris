@@ -5,12 +5,12 @@ package ch.chassaing.hack.expression;
  * point to RAM or ROM. It can also be used to input a Constant into
  * the Address Register.
  */
-public abstract sealed class AddressExpression
-        extends InstructionExpression
+public abstract sealed class Address
+        extends Instruction
         permits Constant, Symbol {
 
-    protected AddressExpression(int lineNumber,
-                                String line)
+    protected Address(int lineNumber,
+                      String line)
     {
         super(lineNumber, line);
     }

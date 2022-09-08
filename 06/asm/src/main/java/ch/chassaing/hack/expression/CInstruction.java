@@ -4,12 +4,11 @@ import ch.chassaing.hack.MachineInstruction;
 import ch.chassaing.hack.SymbolTable;
 
 import java.util.BitSet;
-import java.util.Objects;
 
 import static java.util.Objects.requireNonNull;
 
 public final class CInstruction
-        extends InstructionExpression
+        extends Instruction
 {
     public final Destination dest;
 
