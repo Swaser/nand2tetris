@@ -1,9 +1,8 @@
-package ch.chassaing.hack.instruction;
+package ch.chassaing.hack.expression;
 
-import java.util.Objects;
 import java.util.function.Predicate;
 
-import static ch.chassaing.hack.instruction.Bits.flip;
+import static ch.chassaing.hack.expression.Bits.flip;
 import static java.util.Objects.requireNonNull;
 
 public enum Destination

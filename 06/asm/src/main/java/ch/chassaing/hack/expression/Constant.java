@@ -1,4 +1,4 @@
-package ch.chassaing.hack.instruction;
+package ch.chassaing.hack.expression;
 
 import ch.chassaing.hack.MachineInstruction;
 import ch.chassaing.hack.SymbolTable;
@@ -7,13 +7,17 @@ import java.math.BigInteger;
 
 import static java.util.Objects.requireNonNull;
 
-public record Constant(BigInteger value)
-        implements AInstruction
+public final class Constant
+        extends AddressExpression
 {
+    private final BigInteger value;
 
-    public Constant
+    public Constant(int lineNumber,
+                    String line,
+                    BigInteger value)
     {
-        requireNonNull(value);
+        super(lineNumber, line);
+        this.value = requireNonNull(value);
     }
 
     @Override

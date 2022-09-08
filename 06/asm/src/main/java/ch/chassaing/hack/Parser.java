@@ -1,14 +1,15 @@
 package ch.chassaing.hack;
 
-import ch.chassaing.hack.instruction.Instruction;
+import ch.chassaing.hack.expression.Expression;
+import io.vavr.control.Option;
 
 public interface Parser
 {
     /**
      * Parse one line of assembly code and return the result: Comments and
-     * empty lines will return {@link Result.None}. A correct instruction will
-     * return a {@link Result.Success} and an incorrect one will return a
-     * {@link Result.Error}.
+     * empty lines will return {@link Option.None} and a correct instruction will
+     * return a {@link Option.Some}.
      */
-    Result<Instruction> parseLine(String line);
+    Option<Expression> parseLine(int lineNumber,
+                                 String line);
 }

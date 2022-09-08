@@ -1,7 +1,7 @@
 package ch.chassaing.hack;
 
-import ch.chassaing.hack.instruction.Instruction;
-import ch.chassaing.hack.instruction.LInstruction;
+import ch.chassaing.hack.expression.Expression;
+import ch.chassaing.hack.expression.LabelExpression;
 import io.vavr.Tuple;
 import io.vavr.Tuple2;
 import io.vavr.collection.List;
@@ -18,17 +18,16 @@ import java.util.function.BiConsumer;
 import static java.util.Objects.requireNonNull;
 
 public final class HackAssembler
-        implements Assembler
-{
+        implements Assembler {
     private final Parser parser;
 
-    public HackAssembler(Parser parser)
-    {
+    public HackAssembler(Parser parser) {
+
         this.parser = parser;
     }
 
-    public static void main(String[] args)
-    {
+    public static void main(String[] args) {
+
         if (args.length != 1) {
             System.out.println("Usage: " + HackAssembler.class.getSimpleName() + " assemblerfile");
             System.exit(64);
@@ -43,8 +42,8 @@ public final class HackAssembler
         new HackAssembler(new ParserImpl()).process(filename);
     }
 
-    private void process(String filename)
-    {
+    private void process(String filename) {
+
         Seq<String> lines = readFile(filename);
 
         String outFilename = filename.replace(".asm", ".hack");
@@ -75,9 +74,9 @@ public final class HackAssembler
     public boolean transform(Seq<String> lines,
                              OutputStream machineCodeOutput,
                              BiConsumer<MessageSeverity, CharSequence> messageConsumer)
-            throws IOException
-    {
-        Seq<Result<Instruction>> translateResult = translate(lines);
+            throws IOException {
+
+        Seq<Result<Expression>> translateResult = translate(lines);
 
         SymbolTable symbolTable = new SymbolTableImpl();
 
@@ -85,13 +84,13 @@ public final class HackAssembler
         boolean hasErrors = false;
         // address points to the next instruction
         int address = 0;
-        for (Result<Instruction> instructionResult : translateResult) {
-            if (instructionResult instanceof Result.Error<Instruction> error) {
+        for (Result<Expression> instructionResult : translateResult) {
+            if (instructionResult instanceof Result.Error<Expression> error) {
                 hasErrors = true;
                 messageConsumer.accept(MessageSeverity.ERROR, error.reason());
-            } else if (instructionResult instanceof Result.Success<Instruction> success) {
-                if (success.value() instanceof LInstruction lInstruction) {
-                    symbolTable.putAddress(lInstruction.loopIndicator(), BigInteger.valueOf(address));
+            } else if (instructionResult instanceof Result.Success<Expression> success) {
+                if (success.value() instanceof LabelExpression labelExpression) {
+                    symbolTable.putAddress(labelExpression.loopIndicator(), BigInteger.valueOf(address));
                 } else {
                     // A- and C-instructions advance the address
                     address++;
@@ -104,13 +103,13 @@ public final class HackAssembler
         }
 
         // second pass: generate machine code
-        for (Result<Instruction> instructionResult : translateResult) {
-            if (instructionResult instanceof Result.Success<Instruction> success) {
-                if (success.value() instanceof LInstruction) {
+        for (Result<Expression> instructionResult : translateResult) {
+            if (instructionResult instanceof Result.Success<Expression> success) {
+                if (success.value() instanceof LabelExpression) {
                     continue;
                 }
-                Instruction instruction = success.value();
-                MachineInstruction machineInstruction = instruction.toMachineInstruction(symbolTable);
+                Expression expression = success.value();
+                MachineInstruction machineInstruction = expression.toMachineInstruction(symbolTable);
                 // low byte first = little endian
                 // high byte first = big endian
                 machineCodeOutput.write(machineInstruction.loByte());
@@ -127,8 +126,8 @@ public final class HackAssembler
      * Read the contents of the file as a sequence of lines. Will terminate the process if
      * there is a problem reading the file.
      */
-    private Seq<String> readFile(String file)
-    {
+    private Seq<String> readFile(String file) {
+
         try {
             BufferedInputStream is = new BufferedInputStream(new FileInputStream(file));
             return List.ofAll(IOUtils.readLines(is, StandardCharsets.UTF_8));
@@ -140,17 +139,17 @@ public final class HackAssembler
         }
     }
 
-    private Seq<Result<Instruction>> translate(Seq<String> lines)
-    {
+    private Seq<Result<Expression>> translate(Seq<String> lines) {
+
         requireNonNull(lines);
         Set<String> loopNames = new HashSet<>();
-        Seq<Tuple2<Result<Instruction>, Integer>> numberedInstructions = lines
-                .map(parser::parseLine)
+        Seq<Tuple2<Result<Expression>, Integer>> numberedInstructions = lines
                 .zipWithIndex()
-                .map(tuple -> {
+                .map(tuple -> parser.parseLine(tuple._2, tuple._1))
+                .map(expressionResult -> {
                     // check for duplicate loop declarations
-                    if (tuple._1 instanceof Result.Success<Instruction> success &&
-                        success.value() instanceof LInstruction lInstruction) {
+                    if (expressionResult instanceof Result.Success<Expression> success &&
+                        success.value() instanceof LabelExpression lInstruction) {
                         if (loopNames.contains(lInstruction.loopIndicator())) {
                             return Tuple.of(Result.error("Duplicate loop declaration " + lInstruction.loopIndicator()), tuple._2);
                         } else {
@@ -160,11 +159,12 @@ public final class HackAssembler
                     return tuple;
                 });
 
-        for (Tuple2<Result<Instruction>, Integer> tuple : numberedInstructions) {
-            if (tuple._1 instanceof Result.Error<Instruction> error) {
-                System.out.println("" + tuple._2 + " : " + error.reason());
-            }
-        }
+        numberedInstructions
+                .forEach(tuple -> {
+                    if (tuple._1 instanceof Result.Error<Expression> error) {
+                        System.out.println("" + tuple._2 + " : " + error.reason());
+                    }
+                });
 
         return numberedInstructions.map(Tuple2::_1);
     }

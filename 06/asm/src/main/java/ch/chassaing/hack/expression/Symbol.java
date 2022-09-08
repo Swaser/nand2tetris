@@ -1,16 +1,21 @@
-package ch.chassaing.hack.instruction;
+package ch.chassaing.hack.expression;
 
 import ch.chassaing.hack.MachineInstruction;
 import ch.chassaing.hack.SymbolTable;
 
 import static java.util.Objects.requireNonNull;
 
-public record Symbol(String chars)
-        implements AInstruction
+public final class Symbol
+        extends AddressExpression
 {
-    public Symbol
+    private final String chars;
+
+    public Symbol(int lineNumber,
+                  String line,
+                  String chars)
     {
-        requireNonNull(chars);
+        super(lineNumber, line);
+        this.chars = requireNonNull(chars);
     }
 
     @Override

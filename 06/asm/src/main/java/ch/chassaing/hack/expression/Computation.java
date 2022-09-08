@@ -1,6 +1,6 @@
-package ch.chassaing.hack.instruction;
+package ch.chassaing.hack.expression;
 
-import static ch.chassaing.hack.instruction.Bits.flip;
+import static ch.chassaing.hack.expression.Bits.flip;
 import static java.util.Objects.requireNonNull;
 
 public enum Computation {

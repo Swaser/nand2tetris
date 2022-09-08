@@ -1,6 +1,10 @@
 package ch.chassaing.hack;
 
-import ch.chassaing.hack.instruction.*;
+import ch.chassaing.hack.expression.*;
+import io.vavr.collection.List;
+import io.vavr.collection.Seq;
+import io.vavr.control.Either;
+import io.vavr.control.Option;
 import org.apache.commons.lang3.StringUtils;
 
 import java.math.BigInteger;
@@ -8,7 +12,6 @@ import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static ch.chassaing.hack.Result.*;
 import static java.util.Objects.requireNonNull;
 import static org.apache.commons.lang3.StringUtils.removeEnd;
 import static org.apache.commons.lang3.StringUtils.removeStart;
@@ -20,7 +23,8 @@ public final class ParserImpl
     public static final int MAX_ADDRESS_BITS = 15;
 
     @Override
-    public Result<Instruction> parseLine(String line)
+    public Option<Expression> parseLine(int lineNumber,
+                                        String line)
     {
         requireNonNull(line);
 
@@ -34,104 +38,135 @@ public final class ParserImpl
 
         if (StringUtils.isBlank(trimmed) || trimmed.startsWith("//")) {
             // comment or empty line
-            return none();
+            return Option.none();
         }
 
         if (trimmed.startsWith("@")) {
-            return parseAInstruction(line, trimmed);
+            return Option.some(parseAInstruction(lineNumber, line, trimmed));
         }
 
         if (trimmed.startsWith("(")) {
-            return parseLInstruction(line, trimmed);
+            return Option.some(parseLInstruction(lineNumber, line, trimmed));
         }
 
-        return parseCInstruction(line, trimmed);
+        return Option.some(parseCInstruction(lineNumber, line, trimmed));
     }
 
-    private static Result<Instruction> parseAInstruction(String line,
-                                                         String trimmed)
+    private static Expression parseAInstruction(int lineNumber,
+                                                String line,
+                                                String trimmed)
     {
         String chars = removeStart(trimmed, "@");
 
         if (StringUtils.isNumeric(chars)) {
             BigInteger value = new BigInteger(chars, 10);
             if (value.signum() == -1) {
-                return error("Cannot process negative constants: " + line);
+                return new MalformedExpression(lineNumber, line,
+                                               "Cannot process negative constants");
             }
             if (value.bitLength() > MAX_ADDRESS_BITS) {
-                return error("Only values from 0 to 32767 are allowed: " + line);
+                return new MalformedExpression(lineNumber, line,
+                                               "Only values from 0 to 32767 are allowed");
             }
-            return success(new Constant(value));
+            return new Constant(lineNumber, line, value);
         }
 
         Matcher symbolMatcher = SYMBOL_PATTERN.matcher(chars);
         if (!symbolMatcher.matches()) {
-            return error("Symbols must not start with a digit: " + line);
+            return new MalformedExpression(lineNumber, line,
+                         "Symbols must not start with a digit");
         }
-        return success(new Symbol(chars));
+        return new Symbol(lineNumber, line, chars);
     }
 
-    private Result<Instruction> parseLInstruction(String line,
-                                                  String trimmed)
+    private Expression parseLInstruction(int lineNumber,
+                                         String line,
+                                         String trimmed)
     {
         if (!line.endsWith(")")) {
-            return error("Malformed loop expression: " + line);
+            return new MalformedExpression(lineNumber,
+                                           line,
+                                           "Malformed loop expression");
         }
 
-        String loopName = removeEnd(removeStart(trimmed, "("), ")");
-
-        return success(new LInstruction(loopName));
+        String label = removeEnd(removeStart(trimmed, "("), ")");
+        return new LabelExpression(lineNumber, line, label);
     }
 
-    private Result<Instruction> parseCInstruction(String line,
-                                                  String trimmed)
+    private Expression parseCInstruction(int lineNumber,
+                                         String line,
+                                         String trimmed)
     {
         // cut out the computation part ddd=ccc;jjj
         // but ddd= and ;jjj are both optional
         int equals = trimmed.indexOf('=');
         int semicolon = trimmed.indexOf(';');
         if (equals == -1 && semicolon == -1) {
-            return Result.error("Line contains neither destination nor jump: " + line);
+            return new MalformedExpression(lineNumber,
+                                           line,
+                                           "Line contains neither destination nor jump");
         }
         String compString = trimmed
                 .substring(equals + 1,  // +1 because inclusive and we don't want the =
                            semicolon != -1 ? semicolon : trimmed.length());
 
-        return getComputation(compString)
-                .flatMap(comp -> getDestination(trimmed)
-                        .flatMap(dest -> getJump(trimmed)
-                                .map(jump -> new CInstruction(dest, comp, jump))));
+        Either<String, Destination> destinationEither = getDestination(trimmed);
+        Either<String, Computation> computationEither = getComputation(compString);
+        Either<String, Jump> jumpEither = getJump(trimmed);
+
+        Seq<String> errors = collectErrors(destinationEither,
+                                           computationEither,
+                                           jumpEither);
+
+        if (errors.nonEmpty()) {
+            return new MalformedExpression(lineNumber, line,
+                                           errors.mkString(" & "));
+        }
+
+        return new CInstruction(lineNumber, line,
+                                destinationEither.get(),
+                                computationEither.get(),
+                                jumpEither.get());
     }
 
-    private Result<Destination> getDestination(String line)
+    @SafeVarargs
+    private Seq<String> collectErrors(Either<String, ?>... eithers)
+    {
+
+        return List.of(eithers)
+                .filter(Either::isLeft)
+                .map(Either::getLeft);
+    }
+
+    private Either<String, Destination> getDestination(String line)
     {
         for (Destination dest : Destination.values()) {
             if (dest.match.test(line)) {
-                return Result.success(dest);
+                return Either.right(dest);
             }
         }
 
-        return Result.error("Line doesn't conform to syntax (destination): " + line);
+        return Either.left("Cannot determine destination");
     }
 
-    private Result<Jump> getJump(String line)
+    private Either<String, Jump> getJump(String line)
     {
         for (Jump jump : Jump.values()) {
             if (jump.matches.test(line)) {
-                return Result.success(jump);
+                return Either.right(jump);
             }
         }
 
-        return Result.error("Line doesn't conform to syntax (jump): " + line);
+        return Either.left("Malformed jump part");
     }
 
-    private Result<Computation> getComputation(String compString)
+    private Either<String, Computation> getComputation(String compString)
     {
         for (Computation comp : Computation.values()) {
             if (Objects.equals(comp.stringRep, compString)) {
-                return Result.success(comp);
+                return Either.right(comp);
             }
         }
-        return Result.error("Cannot determine computation in: " + compString);
+        return Either.left("Cannot determine computation");
     }
 }
