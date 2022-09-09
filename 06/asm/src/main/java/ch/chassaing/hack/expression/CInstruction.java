@@ -32,6 +32,27 @@ public final class CInstruction
     @Override
     public MachineInstruction toMachineInstruction(SymbolTable unused)
     {
+        BitSet bitSet = calcBitSet();
+
+        byte[] bytes = bitSet.toByteArray(); // BitSet.toByteArray() is little endian
+        return new MachineInstruction(bytes[0], bytes[1]);
+    }
+
+    @Override
+    public String toAsciiInstruction(SymbolTable symbolTable)
+    {
+        BitSet bitSet = calcBitSet();
+
+        StringBuilder sb = new StringBuilder();
+        for (int i = bitSet.length()-1; i>=0; i--) {
+            boolean bit = bitSet.get(i);
+            sb.append(bit ? "1" : 0);
+        }
+        return sb.toString();
+    }
+
+    private BitSet calcBitSet()
+    {
         BitSet bitSet = new BitSet(16);
         int i = 0;
         for (boolean bit : jump.bits) {
@@ -47,8 +68,6 @@ public final class CInstruction
         bitSet.set(i++, true);
         bitSet.set(i++, true);
         bitSet.set(i, true);
-
-        byte[] bytes = bitSet.toByteArray(); // BitSet.toByteArray() is little endian
-        return new MachineInstruction(bytes[0], bytes[1]);
+        return bitSet;
     }
 }

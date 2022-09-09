@@ -25,4 +25,10 @@ public final class Constant
     {
         return MachineInstruction.fromBigInteger(value);
     }
+
+    @Override
+    public String toAsciiInstruction(SymbolTable symbolTable)
+    {
+        return convertToAscii(value);
+    }
 }

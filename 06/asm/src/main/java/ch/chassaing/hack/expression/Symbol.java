@@ -23,4 +23,10 @@ public final class Symbol
     {
         return MachineInstruction.fromBigInteger(symbolTable.symbolAddress(chars));
     }
+
+    @Override
+    public String toAsciiInstruction(SymbolTable symbolTable)
+    {
+        return convertToAscii(symbolTable.symbolAddress(chars));
+    }
 }

@@ -10,6 +10,7 @@ import org.apache.commons.io.IOUtils;
 
 import java.io.*;
 import java.math.BigInteger;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
 import static java.util.Objects.requireNonNull;
@@ -17,6 +18,7 @@ import static java.util.Objects.requireNonNull;
 public final class HackAssembler
         implements Assembler
 {
+    public static final Charset ENCODING = StandardCharsets.US_ASCII;
     private final Parser parser;
 
     public HackAssembler(Parser parser)
@@ -107,11 +109,16 @@ public final class HackAssembler
         // second pass: generate machine code
         for (Expression expression : expressions) {
             if (expression instanceof Instruction instruction) {
-                MachineInstruction machineInstruction = instruction.toMachineInstruction(symbolTable);
-                // low byte first = little endian
-                // high byte first = big endian
-                machineCodeOutput.write(machineInstruction.loByte());
-                machineCodeOutput.write(machineInstruction.hiByte());
+
+                String s = instruction.toAsciiInstruction(symbolTable);
+
+                machineCodeOutput.write(s.getBytes(ENCODING));
+                machineCodeOutput.write(System.lineSeparator().getBytes(ENCODING));
+//                MachineInstruction machineInstruction = instruction.toMachineInstruction(symbolTable);
+//                // low byte first = little endian
+//                // high byte first = big endian
+//                machineCodeOutput.write(machineInstruction.loByte());
+//                machineCodeOutput.write(machineInstruction.hiByte());
             }
         }
 

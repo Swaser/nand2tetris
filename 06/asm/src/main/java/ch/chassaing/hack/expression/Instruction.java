@@ -16,4 +16,6 @@ public abstract class Instruction
     }
 
     public abstract MachineInstruction toMachineInstruction(SymbolTable symbolTable);
+
+    public abstract String toAsciiInstruction(SymbolTable symbolTable);
 }
