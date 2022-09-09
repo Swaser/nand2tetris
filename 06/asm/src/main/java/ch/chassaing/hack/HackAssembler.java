@@ -6,6 +6,7 @@ import ch.chassaing.hack.expression.Label;
 import ch.chassaing.hack.expression.MalformedExpression;
 import io.vavr.collection.List;
 import io.vavr.collection.Seq;
+import org.apache.commons.cli.*;
 import org.apache.commons.io.IOUtils;
 
 import java.io.*;
@@ -28,13 +29,22 @@ public final class HackAssembler
 
     public static void main(String[] args)
     {
-
-        if (args.length != 1) {
-            System.out.println("Usage: " + HackAssembler.class.getSimpleName() + " assemblerfile");
+        CommandLine commandLine;
+        Options options = new Options();
+        options.addOption("ascii", "Output binary instructions encoded in ASCII");
+        try {
+            commandLine = new DefaultParser().parse(options, args);
+        } catch (ParseException e) {
+            System.err.println("Problem parsing command line");
+            throw new RuntimeException(e);
+        }
+        Seq<String> remainingArgs = List.ofAll(commandLine.getArgList());
+        if (remainingArgs.isEmpty()) {
+            new HelpFormatter().printHelp("Usage: java -jar asm.jar <asm file>", options);
             System.exit(64);
         }
 
-        String filename = args[0];
+        String filename = remainingArgs.head();
         if (!filename.endsWith(".asm")) {
             System.out.println("Filename must have an .asm ending");
             System.exit(64);
