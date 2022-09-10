@@ -32,6 +32,7 @@ public interface Assembler
      */
     boolean transform(Seq<String> lines,
                       OutputStream machineCodeOutput,
-                      Feedback feedback)
+                      Feedback feedback,
+                      boolean ascii)
             throws IOException;
 }

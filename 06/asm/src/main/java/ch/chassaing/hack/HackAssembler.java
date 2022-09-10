@@ -50,10 +50,11 @@ public final class HackAssembler
             System.exit(64);
         }
 
-        new HackAssembler(new ParserImpl()).process(filename);
+        new HackAssembler(new ParserImpl()).process(filename, commandLine.hasOption("ascii"));
     }
 
-    private void process(String filename)
+    private void process(String filename,
+                         boolean ascii)
     {
         Seq<String> lines = readFile(filename);
 
@@ -61,7 +62,8 @@ public final class HackAssembler
         try (FileOutputStream fos = new FileOutputStream(outFilename, false)) {
             boolean success = transform(lines,
                                         fos,
-                                        new SoutFeedback());
+                                        new SoutFeedback(),
+                                        ascii);
 
             if (!success) {
                 System.out.println("Generation of hack file failed.");
@@ -78,7 +80,8 @@ public final class HackAssembler
     @Override
     public boolean transform(Seq<String> lines,
                              OutputStream machineCodeOutput,
-                             Feedback feedback)
+                             Feedback feedback,
+                             boolean ascii)
             throws IOException
     {
         SymbolTable symbolTable = new SymbolTableImpl();
@@ -120,15 +123,17 @@ public final class HackAssembler
         for (Expression expression : expressions) {
             if (expression instanceof Instruction instruction) {
 
-                String s = instruction.toAsciiInstruction(symbolTable);
-
-                machineCodeOutput.write(s.getBytes(ENCODING));
-                machineCodeOutput.write(System.lineSeparator().getBytes(ENCODING));
-//                MachineInstruction machineInstruction = instruction.toMachineInstruction(symbolTable);
-//                // low byte first = little endian
-//                // high byte first = big endian
-//                machineCodeOutput.write(machineInstruction.loByte());
-//                machineCodeOutput.write(machineInstruction.hiByte());
+                if (ascii) {
+                    String s = instruction.toAsciiInstruction(symbolTable);
+                    machineCodeOutput.write(s.getBytes(ENCODING));
+                    machineCodeOutput.write(System.lineSeparator().getBytes(ENCODING));
+                } else {
+                    MachineInstruction machineInstruction = instruction.toMachineInstruction(symbolTable);
+                    // low byte first = little endian
+                    // high byte first = big endian
+                    machineCodeOutput.write(machineInstruction.loByte());
+                    machineCodeOutput.write(machineInstruction.hiByte());
+                }
             }
         }
 
