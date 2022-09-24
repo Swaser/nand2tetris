@@ -18,6 +18,9 @@ public final class SymbolTableImpl
     private long nextFree = 16;
 
     public static final long SCREEN_ADDRESS = 16384L;
+
+    public static final long KEYBOARD_ADDRESS = SCREEN_ADDRESS + 8192;
+
     {
         putAddress("R0", BigInteger.ZERO);
         putAddress("R1", BigInteger.ONE);
@@ -35,8 +38,15 @@ public final class SymbolTableImpl
         putAddress("R13", BigInteger.valueOf(13));
         putAddress("R14", BigInteger.valueOf(14));
         putAddress("R15", BigInteger.valueOf(15));
+
+        putAddress("SP", BigInteger.valueOf(0));
+        putAddress("LCL", BigInteger.valueOf(1));
+        putAddress("ARG", BigInteger.valueOf(2));
+        putAddress("THIS", BigInteger.valueOf(3));
+        putAddress("THAT", BigInteger.valueOf(4));
+
         putAddress("SCREEN", BigInteger.valueOf(SCREEN_ADDRESS));
-        putAddress("KBD", BigInteger.valueOf(16384 + 8192));
+        putAddress("KBD", BigInteger.valueOf(KEYBOARD_ADDRESS));
     }
 
     @Override

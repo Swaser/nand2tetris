@@ -20,11 +20,14 @@ public final class HackAssembler
         implements Assembler
 {
     public static final Charset ENCODING = StandardCharsets.US_ASCII;
-    private final Parser parser;
 
-    public HackAssembler(Parser parser)
+    private final Parser parser;
+    private final Feedback feedback;
+
+    public HackAssembler(Parser parser, Feedback feedback)
     {
         this.parser = parser;
+        this.feedback = feedback;
     }
 
     public static void main(String[] args)
@@ -50,7 +53,10 @@ public final class HackAssembler
             System.exit(64);
         }
 
-        new HackAssembler(new ParserImpl()).process(filename, commandLine.hasOption("ascii"));
+        Feedback feedback = new SoutFeedback(SoutFeedback.Level.DEBUG);
+
+        new HackAssembler(new ParserImpl(), feedback)
+                .process(filename, commandLine.hasOption("ascii"));
     }
 
     private void process(String filename,
@@ -62,16 +68,17 @@ public final class HackAssembler
         try (FileOutputStream fos = new FileOutputStream(outFilename, false)) {
             boolean success = transform(lines,
                                         fos,
-                                        new SoutFeedback(),
+                                        feedback,
                                         ascii);
 
             if (!success) {
-                System.out.println("Generation of hack file failed.");
+                feedback.onError("Generation of hack file failed.");
                 System.exit(32);
             }
 
         } catch (IOException e) {
-            System.err.println("Error processing " + filename);
+            feedback.onError("Error processing " + filename);
+            // TODO remove System.err and replace with feedback
             e.printStackTrace(System.err);
             System.exit(128);
         }
@@ -91,19 +98,19 @@ public final class HackAssembler
         // duplicate labels are detected and the address of the labels
         // are determined and put into the symbol table
 
-        feedback.general("==============================================");
-        feedback.general("============== Start first pass ==============");
-        feedback.general("==============================================");
+        feedback.onInfo("==============================================");
+        feedback.onInfo("============== Start first pass ==============");
+        feedback.onInfo("==============================================");
         boolean hasErrors = false;
         int address = 0; // address points to the next instruction
         for (Expression expression : expressions) {
             if (expression instanceof MalformedExpression malformed) {
                 hasErrors = true;
-                feedback.onError(malformed.lineNumber, malformed.line, malformed.details);
+                feedback.onLineError(malformed.lineNumber, malformed.line, malformed.details);
             } else if (expression instanceof Label label) {
                 if (symbolTable.hasSymbol(label.value)) {
                     hasErrors = true;
-                    feedback.onError(label.lineNumber, label.line, "Duplicate label");
+                    feedback.onLineError(label.lineNumber, label.line, "Duplicate label");
                 } else {
                     symbolTable.putAddress(label.value, BigInteger.valueOf(address));
                 }
@@ -111,9 +118,9 @@ public final class HackAssembler
                 address++;
             }
         }
-        feedback.general("==============================================");
-        feedback.general("==============  End first pass  ==============");
-        feedback.general("==============================================");
+        feedback.onInfo("==============================================");
+        feedback.onInfo("==============  End first pass  ==============");
+        feedback.onInfo("==============================================");
 
         if (hasErrors) {
             return false;
@@ -137,9 +144,9 @@ public final class HackAssembler
             }
         }
 
-        feedback.general("==============================================");
-        feedback.general("============== Generation done  ==============");
-        feedback.general("==============================================");
+        feedback.onInfo("==============================================");
+        feedback.onInfo("============== Generation done  ==============");
+        feedback.onInfo("==============================================");
 
         machineCodeOutput.flush();
 
@@ -157,7 +164,8 @@ public final class HackAssembler
             BufferedInputStream is = new BufferedInputStream(new FileInputStream(file));
             return List.ofAll(IOUtils.readLines(is, StandardCharsets.UTF_8));
         } catch (IOException e) {
-            System.err.println("Problem reading file.");
+            feedback.onError("Problem reading file.");
+            // TODO replace with feedback
             e.printStackTrace(System.err);
             System.exit(64);
             return List.empty(); // the compiler doesn't seem to know that System.exit() terminates the process

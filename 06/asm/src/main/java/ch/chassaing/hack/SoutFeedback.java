@@ -1,33 +1,45 @@
 package ch.chassaing.hack;
 
-class SoutFeedback implements Assembler.Feedback
+class SoutFeedback implements Feedback
 {
-    @Override
-    public void onDebug(int lineNumber, String line, String details)
+    enum Level
     {
-        doSout("DEBUG", lineNumber, line, details);
+        DEBUG, INFO, ERROR;
+    }
+
+    private final Level level;
+
+    SoutFeedback(Level level)
+    {
+        this.level = level;
     }
 
     @Override
-    public void onInfo(int lineNumber, String line, String details)
+    public void onDebug(String text)
     {
-        doSout("INFO", lineNumber, line, details);
+        if (level.ordinal() <= Level.DEBUG.ordinal()) {
+            doSout("DEBUG", text);
+        }
     }
 
     @Override
-    public void onError(int lineNumber, String line, String details)
+    public void onInfo(String text)
     {
-        doSout("ERROR", lineNumber, line, details);
+        if (level.ordinal() <= Level.INFO.ordinal()) {
+            doSout("INFO", text);
+        }
     }
 
     @Override
-    public void general(String text)
+    public void onError(String text)
     {
-        System.out.println(text);
+        if (level.ordinal() <= Level.ERROR.ordinal()) {
+            doSout("ERROR", text);
+        }
     }
 
-    private void doSout(String tag, int lineNumber, String line, String details) {
-
-        System.out.printf("Line %6d %6s: %s - %s%n", lineNumber, tag, line, details);
+    private void doSout(String tag, String text)
+    {
+        System.out.printf("%6s %s%n", tag, text);
     }
 }

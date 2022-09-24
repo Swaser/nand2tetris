@@ -4,21 +4,9 @@ import io.vavr.collection.Seq;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.function.BiConsumer;
 
 public interface Assembler
 {
-    interface Feedback
-    {
-        void onDebug(int lineNumber, String line, String details);
-
-        void onInfo(int lineNumber, String line, String details);
-
-        void onError(int lineNumber, String line, String details);
-
-        void general(String text);
-    }
-
     /**
      * Given a {@link Seq} of Strings which represent lines of assembly language
      * translates them into instructions and then writes them to the provided
