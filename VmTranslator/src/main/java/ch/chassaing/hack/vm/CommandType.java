@@ -1,4 +1,4 @@
-package org.example;
+package ch.chassaing.hack.vm;
 
 public enum CommandType
 {

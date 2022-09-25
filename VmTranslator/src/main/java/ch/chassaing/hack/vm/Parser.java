@@ -1,23 +1,24 @@
-package org.example;
+package ch.chassaing.hack.vm;
 
+import ch.chassaing.hack.vm.command.Add;
+import ch.chassaing.hack.vm.command.Command;
+import ch.chassaing.hack.vm.command.Pop;
+import ch.chassaing.hack.vm.command.Push;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Deque;
-import java.util.LinkedList;
 
 public final class Parser
         implements IParser
 {
     private final ArrayList<String> lines;
-    private       int               currentIndex = -1;
+    private       int               currentLine = -1;
     private       String[]          fields;
 
     public Parser(Path file)
@@ -35,8 +36,8 @@ public final class Parser
     @Override
     public boolean advance()
     {
-        while (++currentIndex < lines.size()) {
-            String nextLine = StringUtils.trim(lines.get(currentIndex));
+        while (++currentLine < lines.size()) {
+            String nextLine = StringUtils.trim(lines.get(currentLine));
             if (nextLine.startsWith("//") || StringUtils.isBlank(nextLine)) {
                 continue;
             }
@@ -47,28 +48,23 @@ public final class Parser
     }
 
     @Override
-    public CommandType commandType()
+    public Command command()
     {
+        Segment segment;
+        int position;
         return switch (fields[0]) {
-            case "push": yield CommandType.PUSH;
-            case "pop": yield CommandType.POP;
+            case "push":
+                segment = Segment.valueOf(fields[1].toUpperCase());
+                position = Integer.parseInt(fields[2]);
+                yield new Push(currentLine, segment, position);
+            case "pop":
+                segment = Segment.valueOf(fields[1].toUpperCase());
+                position = Integer.parseInt(fields[2]);
+                yield new Pop(currentLine, segment, position);
             case "add":
-            case "sub":
-            case "neg":
-                yield CommandType.ARITHMETIC;
-
-        }
-    }
-
-    @Override
-    public String firstArgument()
-    {
-        return null;
-    }
-
-    @Override
-    public int secondArgument()
-    {
-        return 0;
+                yield new Add(currentLine);
+            default:
+                throw new UnsupportedOperationException("Unknown command " + fields[0]);
+        };
     }
 }
