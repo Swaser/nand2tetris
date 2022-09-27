@@ -5,8 +5,7 @@ import ch.chassaing.hack.vm.command.*;
 import java.util.*;
 
 public final class HackWriter
-        implements ICodeWriter
-{
+        implements ICodeWriter {
     private static final Map<Segment, String> BASE_ADDRESSES =
             Map.of(Segment.ARGUMENT, "@ARG",
                    Segment.LOCAL, "@LCL",
@@ -14,10 +13,11 @@ public final class HackWriter
                    Segment.THAT, "@THAT");
 
     private final List<String> instructions = new LinkedList<>();
-    private final List<String> functions    = new LinkedList<>();
+    private final List<String> functions = new LinkedList<>();
+    private int contCounter = 0;
+    private int compCounter = 0;
 
-    public HackWriter()
-    {
+    public HackWriter() {
         // add eternal loop at end of program
         addf("(END)",
              "@END",
@@ -25,28 +25,28 @@ public final class HackWriter
     }
 
     @Override
-    public void add(Command command)
-    {
+    public void add(Command command) {
+
         if (command instanceof Push push) {
             generatePush(push);
         } else if (command instanceof Pop pop) {
             generatePop(pop);
-        } else if (command instanceof Add) {
-            generateAdd();
-        } else if (command instanceof Eq) {
-            generateEq();
+        } else if (command instanceof Arithmetic arithmetic) {
+            generateArithmetic(arithmetic.op());
+        } else if (command instanceof Comparison comparison) {
+            generateCompare(comparison.jumpInstruction());
         }
     }
 
     @Override
-    public Iterable<String> getInstructions()
-    {
+    public Iterable<String> getInstructions() {
+
         return () -> Iterators.combine(instructions.iterator(),
                                        functions.iterator());
     }
 
-    private void generatePush(Push push)
-    {
+    private void generatePush(Push push) {
+
         if (push.segment() == Segment.CONSTANT) {
             constToD(push.value());
         } else {
@@ -58,8 +58,8 @@ public final class HackWriter
     /**
      * Take a value from the stack and put it into a segment
      */
-    private void generatePop(Pop pop)
-    {
+    private void generatePop(Pop pop) {
+
         if (pop.segment() == Segment.CONSTANT) {
             System.out.println("Cannot pop unto CONSTANT segment");
             System.exit(3);
@@ -69,38 +69,76 @@ public final class HackWriter
         dToSegment(pop.segment(), pop.value());
     }
 
-    private void generateAdd()
-    {
+    /**
+     * Zweiter op Oberster
+     * Benutzt R13
+     */
+    private void generateArithmetic(String op) {
+
+        // Erster -> R13
         stackToD();
-        // store first stack value in R13
         add("@R13",
             "M=D");
-        // second stack value goes to D
+
+        // Zweiter -> D
         stackToD();
-        add("@R13",
-            "D=D+M");
+
+        // Erster -> M
+        add("@R13");
+
+        // Zweiter op Erster -> D
+        add("D=D" + op + "M");
         dToStack();
     }
 
-    private void generateEq()
-    {
+    /**
+     * Zweiter - Erster; Sprung bei Bedingung
+     * Benutzt R13
+     */
+    private void generateCompare(String jumpInstruction) {
+
+        String contLabel = "CONTINUE." + contCounter++;
+        String compLabel = "COMP." + compCounter++;
+
+        // Erster -> R13
         stackToD();
-        // store first stack value in R13
         add("@R13",
             "M=D");
-        // second stack value goes to D
-        stackToD();
-        add("@R13",
-            "D=D-M;");
-        // do I have to create jumps for eq?
 
+        // Zweiter -> D
+        stackToD();
+
+        // Erster -> M
+        add("@R13");
+
+        // Zweiter minus Erster -> D
+        add("D=D-M");
+
+        // testen und Sprung bei Erfolg
+        add("@" + compLabel,
+            "D;" + jumpInstruction);
+
+        // kein Sprung: 0 (=false) auf Stack und ans Ende des Blocks springen
+        add("@0",
+            "D=A");
+        dToStack();
+        add("@" + contLabel,
+            "0;JEQ");
+
+        // Sprung: 1 (=true) auf Stack
+        add("(" + compLabel + ")");
+        add("@1",
+            "D=A");
+        dToStack();
+
+        add("(" + contLabel + ")");
     }
 
     /**
      * uses register R13 and R14
      */
-    private void dToSegment(Segment segment, int offset)
-    {
+    private void dToSegment(Segment segment,
+                            int offset) {
         // store D in R13
         add("@R13",
             "M=D");
@@ -124,8 +162,8 @@ public final class HackWriter
     /**
      * no additional register needed
      */
-    private void constToD(int value)
-    {
+    private void constToD(int value) {
+
         add("@" + value,
             "D=A");
     }
@@ -134,8 +172,8 @@ public final class HackWriter
      * no additional register needed
      */
     void segmentToD(Segment segment,
-                    int offset)
-    {
+                    int offset) {
+
         add(BASE_ADDRESSES.get(segment),
             "D=M",         // base address in D
             "@" + offset,  // offset in A
@@ -146,8 +184,8 @@ public final class HackWriter
     /**
      * no additional register needed
      */
-    private void dToStack()
-    {
+    private void dToStack() {
+
         add("@SP",
             "A=M",   // A enthält nun die Adresse auf die der SP zeigt
             "M=D",   // D wird an diese Adresse kopiert
@@ -159,21 +197,21 @@ public final class HackWriter
     /**
      * no additional register needed
      */
-    private void stackToD()
-    {
+    private void stackToD() {
+
         add("@SP",
             "M=M-1", // Wert des SP reduzieren
             "A=M",
             "D=M");
     }
 
-    private void add(String... someInstructions)
-    {
+    private void add(String... someInstructions) {
+
         Collections.addAll(instructions, someInstructions);
     }
 
-    private void addf(String... someInstructions)
-    {
+    private void addf(String... someInstructions) {
+
         Collections.addAll(functions, someInstructions);
     }
 }

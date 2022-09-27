@@ -1,6 +1,11 @@
 package ch.chassaing.hack.vm.command;
 
 public record Eq(int line)
-        implements Command
+        implements Comparison
 {
+    @Override
+    public String jumpInstruction() {
+
+        return "JEQ";
+    }
 }
