@@ -1,14 +1,8 @@
 package ch.chassaing.hack.vm;
 
-import ch.chassaing.hack.vm.command.Add;
-import ch.chassaing.hack.vm.command.Command;
-import ch.chassaing.hack.vm.command.Pop;
-import ch.chassaing.hack.vm.command.Push;
+import ch.chassaing.hack.vm.command.*;
 
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public final class HackWriter
         implements ICodeWriter
@@ -19,20 +13,36 @@ public final class HackWriter
                    Segment.THIS, "@THIS",
                    Segment.THAT, "@THAT");
 
-    private List<String> instructions;
+    private final List<String> instructions = new LinkedList<>();
+    private final List<String> functions    = new LinkedList<>();
+
+    public HackWriter()
+    {
+        // add eternal loop at end of program
+        addf("(END)",
+             "@END",
+             "0;JEQ");
+    }
 
     @Override
-    public List<String> write(Command command)
+    public void add(Command command)
     {
-        instructions = new LinkedList<>();
         if (command instanceof Push push) {
             generatePush(push);
         } else if (command instanceof Pop pop) {
             generatePop(pop);
         } else if (command instanceof Add) {
             generateAdd();
+        } else if (command instanceof Eq) {
+            generateEq();
         }
-        return Collections.unmodifiableList(instructions);
+    }
+
+    @Override
+    public Iterable<String> getInstructions()
+    {
+        return () -> Iterators.combine(instructions.iterator(),
+                                       functions.iterator());
     }
 
     private void generatePush(Push push)
@@ -67,11 +77,23 @@ public final class HackWriter
             "M=D");
         // second stack value goes to D
         stackToD();
-        // read R13 into A and compute sum in D
         add("@R13",
-            "A=M",
-            "D=A+D");
+            "D=D+M");
         dToStack();
+    }
+
+    private void generateEq()
+    {
+        stackToD();
+        // store first stack value in R13
+        add("@R13",
+            "M=D");
+        // second stack value goes to D
+        stackToD();
+        add("@R13",
+            "D=D-M;");
+        // do I have to create jumps for eq?
+
     }
 
     /**
@@ -148,5 +170,10 @@ public final class HackWriter
     private void add(String... someInstructions)
     {
         Collections.addAll(instructions, someInstructions);
+    }
+
+    private void addf(String... someInstructions)
+    {
+        Collections.addAll(functions, someInstructions);
     }
 }

@@ -1,8 +1,5 @@
 package ch.chassaing.hack.vm;
 
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.StringUtils;
-
 import java.io.*;
 import java.nio.file.Path;
 import java.util.List;
@@ -27,14 +24,15 @@ public class Main
         IParser parser = new Parser(vmFile);
         ICodeWriter codeWriter = new HackWriter();
 
+        while (parser.advance()) {
+            codeWriter.add(parser.command());
+        }
+
         try (OutputStreamWriter writer = openForWriting(asmFile)) {
-            while (parser.advance()) {
-                List<String> instructions = codeWriter.write(parser.command());
-                for (String instruction : instructions) {
-                    System.out.println(instruction);
-                    writer.write(instruction);
-                    writer.write(System.lineSeparator());
-                }
+            for (String instruction : codeWriter.getInstructions()) {
+                System.out.println(instruction);
+                writer.write(instruction);
+                writer.write(System.lineSeparator());
             }
         } catch (IOException e) {
             System.err.println("Problem writing to file " + asmFile);
