@@ -1,9 +1,6 @@
 package ch.chassaing.hack.vm;
 
-import ch.chassaing.hack.vm.command.Add;
-import ch.chassaing.hack.vm.command.Command;
-import ch.chassaing.hack.vm.command.Pop;
-import ch.chassaing.hack.vm.command.Push;
+import ch.chassaing.hack.vm.command.*;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 
@@ -63,6 +60,15 @@ public final class Parser
                 yield new Pop(currentLine, segment, position);
             case "add":
                 yield new Add(currentLine);
+            case "sub":
+                yield new Sub(currentLine);
+            case "eq":
+                yield new Eq(currentLine);
+            case "lt":
+                yield new Lt(currentLine);
+            case "gt":
+                yield new Gt(currentLine);
+
             default:
                 throw new UnsupportedOperationException("Unknown command " + fields[0]);
         };
