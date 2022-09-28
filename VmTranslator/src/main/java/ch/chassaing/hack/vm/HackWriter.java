@@ -31,10 +31,12 @@ public final class HackWriter
             generatePush(push);
         } else if (command instanceof Pop pop) {
             generatePop(pop);
-        } else if (command instanceof Arithmetic arithmetic) {
-            generateArithmetic(arithmetic.op());
+        } else if (command instanceof Binary binary) {
+            generateBinary(binary.op());
         } else if (command instanceof Comparison comparison) {
             generateCompare(comparison.jumpInstruction());
+        } else if (command instanceof Unary unary) {
+            generateUnary(unary);
         }
     }
 
@@ -73,7 +75,7 @@ public final class HackWriter
      * Zweiter op Oberster
      * Benutzt R13
      */
-    private void generateArithmetic(String op) {
+    private void generateBinary(String op) {
 
         // Erster -> R13
         stackToD();
@@ -132,6 +134,13 @@ public final class HackWriter
         dToStack();
 
         add("(" + contLabel + ")");
+    }
+
+    private void generateUnary(Unary unary) {
+
+        stackToD();
+        add("D=" + unary.op() + "D");
+        dToStack();
     }
 
     /**

@@ -62,13 +62,20 @@ public final class Parser
                 yield new Add(currentLine);
             case "sub":
                 yield new Sub(currentLine);
+            case "and":
+                yield new And(currentLine);
+            case "or":
+                yield new Or(currentLine);
             case "eq":
                 yield new Eq(currentLine);
             case "lt":
                 yield new Lt(currentLine);
             case "gt":
                 yield new Gt(currentLine);
-
+            case "neg":
+                yield new Neg(currentLine);
+            case "not":
+                yield new Not(currentLine);
             default:
                 throw new UnsupportedOperationException("Unknown command " + fields[0]);
         };

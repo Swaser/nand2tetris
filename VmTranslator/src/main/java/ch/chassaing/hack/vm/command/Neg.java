@@ -1,11 +1,11 @@
 package ch.chassaing.hack.vm.command;
 
-public record Sub(int line)
-        implements Binary
+public record Neg(int line)
+    implements Unary
 {
     @Override
-    public String op() {
-
+    public String op()
+    {
         return "-";
     }
 }
