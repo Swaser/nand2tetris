@@ -1,23 +1,32 @@
 package ch.chassaing.hack.vm;
 
 import ch.chassaing.hack.vm.command.*;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public final class HackWriter
-        implements ICodeWriter {
+        implements ICodeWriter
+{
     private static final Map<Segment, String> BASE_ADDRESSES =
             Map.of(Segment.ARGUMENT, "@ARG",
                    Segment.LOCAL, "@LCL",
                    Segment.THIS, "@THIS",
                    Segment.THAT, "@THAT");
+    public static final  String               TRUE_TO_A      = "@-1";
+    public static final  String               FALSE_TO_A     = "@0";
+    public static final Pattern LABEL_PATTERN = Pattern.compile("\\(([\\w.:$_]+)\\)");
+    public static final Pattern SYMBOL_PATTERN = Pattern.compile("@([\\w.:$_]+)");
 
     private final List<String> instructions = new LinkedList<>();
-    private final List<String> functions = new LinkedList<>();
-    private int contCounter = 0;
-    private int compCounter = 0;
+    private final List<String> functions    = new LinkedList<>();
+    private       int          contCounter  = 0;
+    private       int          compCounter  = 0;
 
-    public HackWriter() {
+    public HackWriter()
+    {
         // add eternal loop at end of program
         addf("(END)",
              "@END",
@@ -25,8 +34,8 @@ public final class HackWriter
     }
 
     @Override
-    public void add(Command command) {
-
+    public void add(Command command)
+    {
         if (command instanceof Push push) {
             generatePush(push);
         } else if (command instanceof Pop pop) {
@@ -41,13 +50,52 @@ public final class HackWriter
     }
 
     @Override
-    public Iterable<String> getInstructions() {
+    public Iterable<String> getInstructions()
+    {
+        // we need to resolve labels as the CPU emulator is not capable of
+        // doing this properly itself
 
-        return () -> Iterators.combine(instructions.iterator(),
-                                       functions.iterator());
+        // first pass - build symbol table
+        Deque<String> deque = new LinkedList<>(instructions);
+        deque.addAll(functions);
+        Map<String, Integer> symbolTable = new HashMap<>();
+        int line = 0;
+        while (!deque.isEmpty()) {
+            String instruction = StringUtils.trim(deque.removeFirst());
+            Matcher matcher = LABEL_PATTERN.matcher(instruction);
+            if (matcher.matches()) {
+                String label = matcher.group(1);
+                if (symbolTable.containsKey(label)) {
+                    throw new RuntimeException("label exists: " + label);
+                } else {
+                    symbolTable.put(label, line);
+                    continue;
+                }
+            }
+            line++; // increase the line number
+        }
+
+        // second pass - now suppress the labels and replace the symbols pointing to labels
+        List<String> result = new LinkedList<>();
+        deque.addAll(instructions);
+        deque.addAll(functions);
+        while (!deque.isEmpty()) {
+            String instruction = StringUtils.trim(deque.removeFirst());
+            if (LABEL_PATTERN.matcher(instruction).matches()) {
+                continue;
+            }
+            Matcher symbolMatcher = SYMBOL_PATTERN.matcher(instruction);
+            if (symbolMatcher.matches() && symbolTable.containsKey(symbolMatcher.group(1))) {
+                result.add("@" + symbolTable.get(symbolMatcher.group(1)));
+            } else {
+                result.add(instruction);
+            }
+        }
+        return result;
     }
 
-    private void generatePush(Push push) {
+    private void generatePush(Push push)
+    {
 
         if (push.segment() == Segment.CONSTANT) {
             constToD(push.value());
@@ -60,7 +108,8 @@ public final class HackWriter
     /**
      * Take a value from the stack and put it into a segment
      */
-    private void generatePop(Pop pop) {
+    private void generatePop(Pop pop)
+    {
 
         if (pop.segment() == Segment.CONSTANT) {
             System.out.println("Cannot pop unto CONSTANT segment");
@@ -75,7 +124,8 @@ public final class HackWriter
      * Zweiter op Oberster
      * Benutzt R13
      */
-    private void generateBinary(String op) {
+    private void generateBinary(String op)
+    {
 
         // Erster -> R13
         stackToD();
@@ -97,7 +147,8 @@ public final class HackWriter
      * Zweiter - Erster; Sprung bei Bedingung
      * Benutzt R13
      */
-    private void generateCompare(String jumpInstruction) {
+    private void generateCompare(String jumpInstruction)
+    {
 
         String contLabel = "CONTINUE." + contCounter++;
         String compLabel = "COMP." + compCounter++;
@@ -121,7 +172,7 @@ public final class HackWriter
             "D;" + jumpInstruction);
 
         // kein Sprung: 0 (=false) auf Stack und ans Ende des Blocks springen
-        add("@0",
+        add(FALSE_TO_A,
             "D=A");
         dToStack();
         add("@" + contLabel,
@@ -129,14 +180,15 @@ public final class HackWriter
 
         // Sprung: -1 (=true) auf Stack
         add("(" + compLabel + ")");
-        add("@-1",
+        add(TRUE_TO_A,
             "D=A");
         dToStack();
 
         add("(" + contLabel + ")");
     }
 
-    private void generateUnary(Unary unary) {
+    private void generateUnary(Unary unary)
+    {
 
         stackToD();
         add("D=" + unary.op() + "D");
@@ -147,7 +199,8 @@ public final class HackWriter
      * uses register R13 and R14
      */
     private void dToSegment(Segment segment,
-                            int offset) {
+                            int offset)
+    {
         // store D in R13
         add("@R13",
             "M=D");
@@ -171,7 +224,8 @@ public final class HackWriter
     /**
      * no additional register needed
      */
-    private void constToD(int value) {
+    private void constToD(int value)
+    {
 
         add("@" + value,
             "D=A");
@@ -181,7 +235,8 @@ public final class HackWriter
      * no additional register needed
      */
     void segmentToD(Segment segment,
-                    int offset) {
+                    int offset)
+    {
 
         add(BASE_ADDRESSES.get(segment),
             "D=M",         // base address in D
@@ -193,7 +248,8 @@ public final class HackWriter
     /**
      * no additional register needed
      */
-    private void dToStack() {
+    private void dToStack()
+    {
 
         add("@SP",
             "A=M",   // A enthält nun die Adresse auf die der SP zeigt
@@ -206,7 +262,8 @@ public final class HackWriter
     /**
      * no additional register needed
      */
-    private void stackToD() {
+    private void stackToD()
+    {
 
         add("@SP",
             "M=M-1", // Wert des SP reduzieren
@@ -214,12 +271,14 @@ public final class HackWriter
             "D=M");
     }
 
-    private void add(String... someInstructions) {
+    private void add(String... someInstructions)
+    {
 
         Collections.addAll(instructions, someInstructions);
     }
 
-    private void addf(String... someInstructions) {
+    private void addf(String... someInstructions)
+    {
 
         Collections.addAll(functions, someInstructions);
     }

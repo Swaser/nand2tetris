@@ -1,7 +1,10 @@
 package ch.chassaing.hack.vm;
 
+import org.apache.commons.lang3.StringUtils;
+
 import java.io.*;
 import java.nio.file.Path;
+import java.util.Iterator;
 import java.util.List;
 
 public class Main
@@ -29,8 +32,11 @@ public class Main
         }
 
         try (OutputStreamWriter writer = openForWriting(asmFile)) {
-            for (String instruction : codeWriter.getInstructions()) {
-                System.out.println(instruction);
+            int line = 0;
+            Iterator<String> it = codeWriter.getInstructions().iterator();
+            while (it.hasNext()) {
+                String instruction = StringUtils.trim(it.next());
+                System.out.printf("%5d: %s\n", line++, instruction);
                 writer.write(instruction);
                 writer.write(System.lineSeparator());
             }
