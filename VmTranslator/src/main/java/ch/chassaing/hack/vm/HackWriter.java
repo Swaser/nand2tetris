@@ -127,9 +127,9 @@ public final class HackWriter
         add("@" + contLabel,
             "0;JEQ");
 
-        // Sprung: 1 (=true) auf Stack
+        // Sprung: -1 (=true) auf Stack
         add("(" + compLabel + ")");
-        add("@1",
+        add("@-1",
             "D=A");
         dToStack();
 
