@@ -1,11 +1,11 @@
 package ch.chassaing.hack.vm;
 
 import ch.chassaing.hack.vm.command.*;
-import org.apache.commons.lang3.StringUtils;
 
-import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 
 public final class HackWriter
         implements ICodeWriter
@@ -15,10 +15,6 @@ public final class HackWriter
                    Segment.LOCAL, "@LCL",
                    Segment.THIS, "@THIS",
                    Segment.THAT, "@THAT");
-    public static final  String               TRUE_TO_A      = "@-1";
-    public static final  String               FALSE_TO_A     = "@0";
-    public static final Pattern LABEL_PATTERN = Pattern.compile("\\(([\\w.:$_]+)\\)");
-    public static final Pattern SYMBOL_PATTERN = Pattern.compile("@([\\w.:$_]+)");
 
     private final List<String> instructions = new LinkedList<>();
     private final List<String> functions    = new LinkedList<>();
@@ -52,57 +48,18 @@ public final class HackWriter
     @Override
     public Iterable<String> getInstructions()
     {
-        // we need to resolve labels as the CPU emulator is not capable of
-        // doing this properly itself
-
-        // first pass - build symbol table
-        Deque<String> deque = new LinkedList<>(instructions);
-        deque.addAll(functions);
-        Map<String, Integer> symbolTable = new HashMap<>();
-        int line = 0;
-        while (!deque.isEmpty()) {
-            String instruction = StringUtils.trim(deque.removeFirst());
-            Matcher matcher = LABEL_PATTERN.matcher(instruction);
-            if (matcher.matches()) {
-                String label = matcher.group(1);
-                if (symbolTable.containsKey(label)) {
-                    throw new RuntimeException("label exists: " + label);
-                } else {
-                    symbolTable.put(label, line);
-                    continue;
-                }
-            }
-            line++; // increase the line number
-        }
-
-        // second pass - now suppress the labels and replace the symbols pointing to labels
-        List<String> result = new LinkedList<>();
-        deque.addAll(instructions);
-        deque.addAll(functions);
-        while (!deque.isEmpty()) {
-            String instruction = StringUtils.trim(deque.removeFirst());
-            if (LABEL_PATTERN.matcher(instruction).matches()) {
-                continue;
-            }
-            Matcher symbolMatcher = SYMBOL_PATTERN.matcher(instruction);
-            if (symbolMatcher.matches() && symbolTable.containsKey(symbolMatcher.group(1))) {
-                result.add("@" + symbolTable.get(symbolMatcher.group(1)));
-            } else {
-                result.add(instruction);
-            }
-        }
-        return result;
+        return () -> Iterators.combine(instructions.iterator(),
+                                       functions.iterator());
     }
 
     private void generatePush(Push push)
     {
-
         if (push.segment() == Segment.CONSTANT) {
             constToD(push.value());
         } else {
             segmentToD(push.segment(), push.value());
         }
-        dToStack();
+        toStack("D");
     }
 
     /**
@@ -110,7 +67,6 @@ public final class HackWriter
      */
     private void generatePop(Pop pop)
     {
-
         if (pop.segment() == Segment.CONSTANT) {
             System.out.println("Cannot pop unto CONSTANT segment");
             System.exit(3);
@@ -122,77 +78,48 @@ public final class HackWriter
 
     /**
      * Zweiter op Oberster
-     * Benutzt R13
      */
     private void generateBinary(String op)
     {
-
-        // Erster -> R13
-        stackToD();
-        add("@R13",
-            "M=D");
-
-        // Zweiter -> D
-        stackToD();
-
-        // Erster -> M
-        add("@R13");
-
-        // Zweiter op Erster -> D
-        add("D=D" + op + "M");
-        dToStack();
+        stackToD();            // Erster -> D
+        stackToM();            // Zweiter -> M
+        add("D=M" + op + "D"); // Zweiter op Erster -> D
+        toStack("D");
     }
 
     /**
      * Zweiter - Erster; Sprung bei Bedingung
-     * Benutzt R13
      */
     private void generateCompare(String jumpInstruction)
     {
-
         String contLabel = "CONTINUE." + contCounter++;
         String compLabel = "COMP." + compCounter++;
 
-        // Erster -> R13
-        stackToD();
-        add("@R13",
-            "M=D");
-
-        // Zweiter -> D
-        stackToD();
-
-        // Erster -> M
-        add("@R13");
-
-        // Zweiter minus Erster -> D
-        add("D=D-M");
+        stackToD();        // Erster -> D
+        stackToM();        // Zweiter -> M
+        add("D=M-D");      // Zweiter minus Erster -> D
 
         // testen und Sprung bei Erfolg
         add("@" + compLabel,
             "D;" + jumpInstruction);
 
         // kein Sprung: 0 (=false) auf Stack und ans Ende des Blocks springen
-        add(FALSE_TO_A,
-            "D=A");
-        dToStack();
+        toStack("0");
         add("@" + contLabel,
-            "0;JEQ");
+            "0;JEQ ");
 
         // Sprung: -1 (=true) auf Stack
         add("(" + compLabel + ")");
-        add(TRUE_TO_A,
-            "D=A");
-        dToStack();
+        toStack("-1");
 
         add("(" + contLabel + ")");
     }
 
     private void generateUnary(Unary unary)
     {
-
-        stackToD();
-        add("D=" + unary.op() + "D");
-        dToStack();
+        stackToM();
+        add("D=" + unary.op() + "M");
+        toStack("D");
     }
 
     /**
@@ -226,7 +153,6 @@ public final class HackWriter
      */
     private void constToD(int value)
     {
-
         add("@" + value,
             "D=A");
     }
@@ -237,7 +163,6 @@ public final class HackWriter
     void segmentToD(Segment segment,
                     int offset)
     {
-
         add(BASE_ADDRESSES.get(segment),
             "D=M",         // base address in D
             "@" + offset,  // offset in A
@@ -245,18 +170,13 @@ public final class HackWriter
             "D=M");        // D now has the value at the address
     }
 
-    /**
-     * no additional register needed
-     */
-    private void dToStack()
+    private void toStack(String what)
     {
-
         add("@SP",
-            "A=M",   // A enthält nun die Adresse auf die der SP zeigt
-            "M=D",   // D wird an diese Adresse kopiert
-            "D=A+1", // Die Adresse für den SP wird um 1 erhöht
+            "A=M",
+            "M=" + what,
             "@SP",
-            "M=D");  // und der neue Wert wird in den SP zurückgeschrieben
+            "M=M+1");
     }
 
     /**
@@ -264,22 +184,24 @@ public final class HackWriter
      */
     private void stackToD()
     {
+        stackToM();
+        add("D=M");
+    }
 
+    private void stackToM()
+    {
         add("@SP",
-            "M=M-1", // Wert des SP reduzieren
-            "A=M",
-            "D=M");
+            "M=M-1", // reduce value in SP
+            "A=M");
     }
 
     private void add(String... someInstructions)
     {
-
         Collections.addAll(instructions, someInstructions);
     }
 
     private void addf(String... someInstructions)
     {
-
         Collections.addAll(functions, someInstructions);
     }
 }
