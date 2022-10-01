@@ -32,15 +32,22 @@ public class Main
         IParser parser = new Parser(vmFile);
         ICodeWriter codeWriter = new HackWriter();
 
-        while (parser.advance()) {
-            codeWriter.add(parser.command());
+        int line;
+        while ((line = parser.advance()) > 0) {
+            try {
+                codeWriter.add(parser.command());
+            } catch (Exception e) {
+                System.out.println(line + ": " + e.getMessage());
+                System.exit(3);
+            }
         }
 
         try (OutputStreamWriter writer = openForWriting(asmFile)) {
-            int line = 0;
-            for (String instruction : removeLabels(codeWriter.getInstructions())) {
+            int iCount = 0;
+            Iterable<String> instructions = codeWriter.getInstructions();
+            for (String instruction : instructions) {
                 instruction = StringUtils.trim(instruction);
-                System.out.printf("%5d: %s\n", line++, instruction);
+                System.out.printf("%5d: %s\n", iCount++, instruction);
                 writer.write(instruction);
                 writer.write(System.lineSeparator());
             }

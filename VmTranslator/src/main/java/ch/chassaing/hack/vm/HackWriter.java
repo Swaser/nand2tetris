@@ -56,34 +56,57 @@ public final class HackWriter
     {
         if (push.segment() == Segment.CONSTANT) {
             constToD(push.value());
+        } else if (push.segment() == Segment.POINTER) {
+            add(push.value() == 0 ? "@THIS" : "@THAT",
+                "D=M");
+        } else if (push.segment() == Segment.TEMP) {
+            add("@R" + (5 + push.value()),
+                "D=M");
+        } else if (push.segment() == Segment.STATIC) {
+            add("@STATIC." + push.value(),
+                "D=M");
         } else {
             segmentToD(push.segment(), push.value());
         }
         toStack("D");
     }
 
-    /**
-     * Take a value from the stack and put it into a segment
-     */
     private void generatePop(Pop pop)
     {
-        if (pop.segment() == Segment.CONSTANT) {
-            System.out.println("Cannot pop unto CONSTANT segment");
-            System.exit(3);
-        }
+        if (pop.segment() == Segment.POINTER) {
+            stackToD();
+            add(pop.value() == 0 ? "@THIS" : "@THAT",
+                "M=D");
+        } else if (pop.segment() == Segment.TEMP) {
+            stackToD();
+            add("@R" + (5 + pop.value()),
+                "M=D");
+        } else if (pop.segment() == Segment.STATIC) {
+            stackToD();
+            add("@STATIC." + pop.value(),
+                "M=D");
+        } else {
+            // calc address and store it in R13
+            add(BASE_ADDRESSES.get(pop.segment()),
+                "D=M",
+                "@" + pop.value(),
+                "D=D+A",
+                "@R13",
+                "M=D");
 
-        stackToD();
-        dToSegment(pop.segment(), pop.value());
+            // get stack value and store it in (R13)
+            stackToD();
+            add("@R13",
+                "A=M",
+                "M=D");
+        }
     }
 
-    /**
-     * Zweiter op Oberster
-     */
     private void generateBinary(String op)
     {
-        stackToD();            // Erster -> D
-        stackToM();            // Zweiter -> M
-        add("D=M" + op + "D"); // Zweiter op Erster -> D
+        stackToD();            // first = y-> D
+        stackToM();            // second = x -> M
+        add("D=M" + op + "D"); // x op y -> D
         toStack("D");
     }
 
@@ -95,20 +118,20 @@ public final class HackWriter
         String contLabel = "CONTINUE." + contCounter++;
         String compLabel = "COMP." + compCounter++;
 
-        stackToD();        // Erster -> D
-        stackToM();        // Zweiter -> M
-        add("D=M-D");      // Zweiter minus Erster -> D
+        stackToD();        // first = y -> D
+        stackToM();        // second = x -> M
+        add("D=M-D");      // x - y -> D
 
-        // testen und Sprung bei Erfolg
+        // compare and jump if condition holds
         add("@" + compLabel,
             "D;" + jumpInstruction);
 
-        // kein Sprung: 0 (=false) auf Stack und ans Ende des Blocks springen
+        // no jump: put false (=0) on stack and jump to end of block
         toStack("0");
         add("@" + contLabel,
             "0;JEQ ");
 
-        // Sprung: -1 (=true) auf Stack
+        // jumped: put true (=-1) on stack
         add("(" + compLabel + ")");
         toStack("-1");
 
@@ -122,44 +145,15 @@ public final class HackWriter
         toStack("D");
     }
 
-    /**
-     * uses register R13 and R14
-     */
-    private void dToSegment(Segment segment,
-                            int offset)
-    {
-        // store D in R13
-        add("@R13",
-            "M=D");
-
-        // store Address in R14
-        add(BASE_ADDRESSES.get(segment),
-            "D=M",
-            "@" + offset,
-            "D=D+A",
-            "@R14",
-            "M=D");
-
-        // store R13 to (R14)
-        add("@R13",
-            "D=M",
-            "@R14",
-            "A=M",
-            "M=D");
-    }
-
-    /**
-     * no additional register needed
-     */
     private void constToD(int value)
     {
+        if (value < 0) {
+            throw new IllegalArgumentException("Constant cannot be negative: " + value);
+        }
         add("@" + value,
             "D=A");
     }
 
-    /**
-     * no additional register needed
-     */
     void segmentToD(Segment segment,
                     int offset)
     {

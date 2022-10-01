@@ -31,7 +31,7 @@ public final class Parser
     }
 
     @Override
-    public boolean advance()
+    public int advance()
     {
         while (++currentLine < lines.size()) {
             String nextLine = StringUtils.trim(lines.get(currentLine));
@@ -39,9 +39,9 @@ public final class Parser
                 continue;
             }
             fields = StringUtils.split(nextLine);
-            return true;
+            return currentLine;
         }
-        return false;
+        return -1;
     }
 
     @Override

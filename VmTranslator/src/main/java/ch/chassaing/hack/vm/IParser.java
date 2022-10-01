@@ -7,9 +7,9 @@ public interface IParser
     /**
      * Read the next line and make it the current one. This method
      * will automatically skip comments and empty lines.
-     * Return false if there are no next lines.
+     * @return the line number of the current line or -1 if there are no more lines
      */
-    boolean advance();
+    int advance();
 
     Command command();
 }
