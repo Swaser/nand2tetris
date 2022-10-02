@@ -63,7 +63,7 @@ public final class HackWriter
             add("@R" + (5 + push.value()),
                 "D=M");
         } else if (push.segment() == Segment.STATIC) {
-            add("@STATIC." + push.value(),
+            add(staticSymbol(push.value()),
                 "D=M");
         } else {
             segmentToD(push.segment(), push.value());
@@ -83,7 +83,7 @@ public final class HackWriter
                 "M=D");
         } else if (pop.segment() == Segment.STATIC) {
             stackToD();
-            add("@STATIC." + pop.value(),
+            add(staticSymbol(pop.value()),
                 "M=D");
         } else {
             // calc address and store it in R13
@@ -100,6 +100,11 @@ public final class HackWriter
                 "A=M",
                 "M=D");
         }
+    }
+
+    private String staticSymbol(int value)
+    {
+        return "@STATIC." + value;
     }
 
     private void generateBinary(String op)
@@ -154,8 +159,8 @@ public final class HackWriter
             "D=A");
     }
 
-    void segmentToD(Segment segment,
-                    int offset)
+    private void segmentToD(Segment segment,
+                            int offset)
     {
         add(BASE_ADDRESSES.get(segment),
             "D=M",         // base address in D
@@ -173,9 +178,6 @@ public final class HackWriter
             "M=M+1");
     }
 
-    /**
-     * no additional register needed
-     */
     private void stackToD()
     {
         stackToM();
