@@ -47,17 +47,15 @@ public final class Parser
     @Override
     public Command command()
     {
-        Segment segment;
-        int position;
         return switch (fields[0]) {
             case "push":
-                segment = Segment.valueOf(fields[1].toUpperCase());
-                position = Integer.parseInt(fields[2]);
-                yield new Push(currentLine, segment, position);
+                yield new Push(currentLine,
+                               Segment.valueOf(fields[1].toUpperCase()),
+                               Integer.parseInt(fields[2]));
             case "pop":
-                segment = Segment.valueOf(fields[1].toUpperCase());
-                position = Integer.parseInt(fields[2]);
-                yield new Pop(currentLine, segment, position);
+                yield new Pop(currentLine,
+                              Segment.valueOf(fields[1].toUpperCase()),
+                              Integer.parseInt(fields[2]));
             case "add":
                 yield new Add(currentLine);
             case "sub":
@@ -76,6 +74,10 @@ public final class Parser
                 yield new Neg(currentLine);
             case "not":
                 yield new Not(currentLine);
+            case "function":
+                yield new Function(currentLine,
+                                   fields[1],
+                                   Integer.parseInt(fields[2]));
             default:
                 throw new UnsupportedOperationException("Unknown command " + fields[0]);
         };

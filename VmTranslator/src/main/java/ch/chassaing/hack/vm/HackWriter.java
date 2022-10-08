@@ -1,11 +1,9 @@
 package ch.chassaing.hack.vm;
 
 import ch.chassaing.hack.vm.command.*;
+import org.apache.commons.lang3.StringUtils;
 
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public final class HackWriter
         implements ICodeWriter
@@ -17,16 +15,14 @@ public final class HackWriter
                    Segment.THAT, "@THAT");
 
     private final List<String> instructions = new LinkedList<>();
-    private final List<String> functions    = new LinkedList<>();
     private       int          contCounter  = 0;
     private       int          compCounter  = 0;
+    private       String       progName;
 
-    public HackWriter()
+    @Override
+    public void setProgName(String progName)
     {
-        // add eternal loop at end of program
-        addf("(END)",
-             "@END",
-             "0;JEQ");
+        this.progName = progName;
     }
 
     @Override
@@ -42,14 +38,15 @@ public final class HackWriter
             generateCompare(comparison.jumpInstruction());
         } else if (command instanceof Unary unary) {
             generateUnary(unary);
+        } else if (command instanceof Function function) {
+            generateFunction(function);
         }
     }
 
     @Override
     public Iterable<String> getInstructions()
     {
-        return () -> Iterators.combine(instructions.iterator(),
-                                       functions.iterator());
+        return instructions;
     }
 
     private void generatePush(Push push)
@@ -104,7 +101,10 @@ public final class HackWriter
 
     private String staticSymbol(int value)
     {
-        return "@STATIC." + value;
+        if (StringUtils.isBlank(progName)) {
+            throw new IllegalStateException("progName must be set");
+        }
+        return "@%s.%d".formatted(progName, value);
     }
 
     private void generateBinary(String op)
@@ -150,6 +150,13 @@ public final class HackWriter
         toStack("D");
     }
 
+    private void generateFunction(Function function) {
+        add("(" + function.name() + ")");
+        for (int i=0; i<function.nVars(); i++) {
+            toStack("0");
+        }
+    }
+
     private void constToD(int value)
     {
         if (value < 0) {
@@ -169,8 +176,14 @@ public final class HackWriter
             "D=M");        // D now has the value at the address
     }
 
+    /**
+     * @param what any of 0, -1, 1, or D
+     */
     private void toStack(String what)
     {
+        if (!Set.of("0", "-1", "1", "D").contains(what)) {
+            throw new IllegalArgumentException("Only 0, -1, 1, or D allowed");
+        }
         add("@SP",
             "A=M",
             "M=" + what,
@@ -194,10 +207,5 @@ public final class HackWriter
     private void add(String... someInstructions)
     {
         Collections.addAll(instructions, someInstructions);
-    }
-
-    private void addf(String... someInstructions)
-    {
-        Collections.addAll(functions, someInstructions);
     }
 }
