@@ -28,7 +28,7 @@ public final class HackWriter
     @Override
     public void add(Command command)
     {
-        add("// " + command);
+        //add("// " + command);
         if (command instanceof Push push) {
             generatePush(push);
         } else if (command instanceof Pop pop) {
@@ -161,7 +161,6 @@ public final class HackWriter
 
     private void generateCall(Call call)
     {
-
         String returnLabel = call.function() + "$ret";
 
         // Rücksprungadresse auf den Stack
@@ -249,15 +248,9 @@ public final class HackWriter
                 "A=M+1", // pointer dereferenzieren
                 "M=D");
         } else {
-            // calc address and store it in R13
-            add(symbol,
-                "D=M",
-                "@" + offset,
-                "D=D+A",
-                "@R13",
-                "M=D");
-
-            // get stack value and store it in (R13)
+            add("@" + offset, "D=A"); // Offset in D
+            add(symbol, "D=M+D");     // Adresse in D
+            add("@R13", "M=D");       // Adresse in R13
             stackToD();
             add("@R13",
                 "A=M", // pointer dereferenzieren
@@ -279,16 +272,16 @@ public final class HackWriter
     {
         String symbol = SEGMENT_SYMBOLS.get(segment);
         if (offset == 0) {
-            add(symbol, "D=M");
+            add(symbol, "A=M", "D=M");
         } else if (offset == 1) {
-            add(symbol, "A=A+1", "D=M");
+            add(symbol, "A=M+1", "D=M");
         } else if (offset == 2) {
-            add(symbol, "A=A+1", "A=A+1", "D=M");
+            add(symbol, "A=M+1", "A=A+1", "D=M");
         } else {
             add("@" + offset,
                 "D=A",
                 symbol,
-                "A=A+D",
+                "A=M+D",
                 "D=M");
         }
     }
