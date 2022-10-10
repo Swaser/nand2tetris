@@ -8,7 +8,7 @@ import java.util.*;
 public final class HackWriter
         implements ICodeWriter
 {
-    private static final Map<Segment, String> BASE_ADDRESSES =
+    private static final Map<Segment, String> SEGMENT_SYMBOLS =
             Map.of(Segment.ARGUMENT, "@ARG",
                    Segment.LOCAL, "@LCL",
                    Segment.THIS, "@THIS",
@@ -28,6 +28,7 @@ public final class HackWriter
     @Override
     public void add(Command command)
     {
+        add("// " + command);
         if (command instanceof Push push) {
             generatePush(push);
         } else if (command instanceof Pop pop) {
@@ -40,6 +41,15 @@ public final class HackWriter
             generateUnary(unary);
         } else if (command instanceof Function function) {
             generateFunction(function);
+        } else if (command instanceof Return) {
+            generateReturn();
+        } else if (command instanceof Call call) {
+            generateCall(call);
+        } else if (command instanceof Label label) {
+            add("(" + label.label() + ")");
+        } else if (command instanceof Goto aGoto) {
+            add("@" + aGoto.label(),
+                "0;JEQ");
         }
     }
 
@@ -83,19 +93,8 @@ public final class HackWriter
             add(staticSymbol(pop.value()),
                 "M=D");
         } else {
-            // calc address and store it in R13
-            add(BASE_ADDRESSES.get(pop.segment()),
-                "D=M",
-                "@" + pop.value(),
-                "D=D+A",
-                "@R13",
-                "M=D");
-
-            // get stack value and store it in (R13)
-            stackToD();
-            add("@R13",
-                "A=M",
-                "M=D");
+            popToSymbol(SEGMENT_SYMBOLS.get(pop.segment()),
+                        pop.value());
         }
     }
 
@@ -150,10 +149,119 @@ public final class HackWriter
         toStack("D");
     }
 
-    private void generateFunction(Function function) {
+    private void generateFunction(Function function)
+    {
         add("(" + function.name() + ")");
-        for (int i=0; i<function.nVars(); i++) {
-            toStack("0");
+        // Die lokalen Variablen mit 0 initialisieren
+        if (function.nVars() > 0) {
+            add("@SP");
+            for (int i = 0; i < function.nVars(); i++) add("A=M", "M=0", "@SP", "M=M+1");
+        }
+    }
+
+    private void generateCall(Call call)
+    {
+
+        String returnLabel = call.function() + "$ret";
+
+        // Rücksprungadresse auf den Stack
+        add("@" + returnLabel,
+            "D=A");
+        toStack("D");
+
+        add("@LCL", "D=M");
+        toStack("D");
+
+        add("@ARG", "D=M");
+        toStack("D");
+
+        add("@THIS", "D=M");
+        toStack("D");
+
+        add("@THAT", "D=M");
+        toStack("D");
+
+        // ARG = SP - 5 - nArgs
+        add("@SP", "D=M", "@5", "D=D-A");
+        if (call.nArgs() > 0) {
+            add("@" + call.nArgs(), "D=D-A");
+        }
+        add("@ARG", "M=D");
+
+        // LCL = SP
+        add("@SP", "D=M", "@LCL", "M=D");
+
+        // Sprung zur Funktion
+        add("@" + call.function(), "0;JEQ");
+
+        add("(" + returnLabel + ")");
+
+        // SP zeigt jetzt auf 1 nach dem letzten Argument
+        // Das letzte Element auf dem Stack soll nun aber der Return Wert sein, der beim ersten Argument steht
+        // --> SP = SP - nArgs + 1
+        int remaining = call.nArgs() - 1;
+        if (remaining > 0) {
+            add("@SP");
+            do {
+                add("M=M-1");
+            } while (--remaining > 0);
+        }
+    }
+
+    private void generateReturn()
+    {
+
+        // return value to (ARG)
+        popToSymbol("@ARG", 0);
+
+        // set SP to LCL
+        add("@LCL",
+            "D=M",
+            "@SP",
+            "M=D");
+
+        stackToD();
+        add("@THAT", "M=D");
+        stackToD();
+        add("@THIS", "M=D");
+        stackToD();
+        add("@ARG", "M=D");
+        stackToD();
+        add("@LCL", "M=D");
+
+        // LCL to Temp (R13)
+        add("@LCL",
+            "D=M",
+            "@R13",
+            "M=D");
+    }
+
+    private void popToSymbol(String symbol, int offset)
+    {
+        if (offset == 0) {
+            stackToD();
+            add(symbol,
+                "A=M", // pointer dereferenzieren
+                "M=D");
+        } else if (offset == 1) {
+            stackToD();
+            add(symbol,
+                "A=M+1", // pointer dereferenzieren
+                "M=D");
+        } else {
+            // calc address and store it in R13
+            add(symbol,
+                "D=M",
+                "@" + offset,
+                "D=D+A",
+                "@R13",
+                "M=D");
+
+            // get stack value and store it in (R13)
+            stackToD();
+            add("@R13",
+                "A=M", // pointer dereferenzieren
+                "M=D");
         }
     }
 
@@ -169,11 +277,20 @@ public final class HackWriter
     private void segmentToD(Segment segment,
                             int offset)
     {
-        add(BASE_ADDRESSES.get(segment),
-            "D=M",         // base address in D
-            "@" + offset,  // offset in A
-            "A=D+A",       // A now has the address
-            "D=M");        // D now has the value at the address
+        String symbol = SEGMENT_SYMBOLS.get(segment);
+        if (offset == 0) {
+            add(symbol, "D=M");
+        } else if (offset == 1) {
+            add(symbol, "A=A+1", "D=M");
+        } else if (offset == 2) {
+            add(symbol, "A=A+1", "A=A+1", "D=M");
+        } else {
+            add("@" + offset,
+                "D=A",
+                symbol,
+                "A=A+D",
+                "D=M");
+        }
     }
 
     /**

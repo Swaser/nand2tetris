@@ -48,38 +48,30 @@ public final class Parser
     public Command command()
     {
         return switch (fields[0]) {
-            case "push":
-                yield new Push(currentLine,
-                               Segment.valueOf(fields[1].toUpperCase()),
-                               Integer.parseInt(fields[2]));
-            case "pop":
-                yield new Pop(currentLine,
-                              Segment.valueOf(fields[1].toUpperCase()),
-                              Integer.parseInt(fields[2]));
-            case "add":
-                yield new Add(currentLine);
-            case "sub":
-                yield new Sub(currentLine);
-            case "and":
-                yield new And(currentLine);
-            case "or":
-                yield new Or(currentLine);
-            case "eq":
-                yield new Eq(currentLine);
-            case "lt":
-                yield new Lt(currentLine);
-            case "gt":
-                yield new Gt(currentLine);
-            case "neg":
-                yield new Neg(currentLine);
-            case "not":
-                yield new Not(currentLine);
-            case "function":
-                yield new Function(currentLine,
-                                   fields[1],
-                                   Integer.parseInt(fields[2]));
-            default:
-                throw new UnsupportedOperationException("Unknown command " + fields[0]);
+            case "push" -> new Push(currentLine,
+                                    Segment.valueOf(fields[1].toUpperCase()),
+                                    Integer.parseInt(fields[2]));
+            case "pop" -> new Pop(currentLine,
+                                  Segment.valueOf(fields[1].toUpperCase()),
+                                  Integer.parseInt(fields[2]));
+            case "add" -> new Add(currentLine);
+            case "sub" -> new Sub(currentLine);
+            case "and" -> new And(currentLine);
+            case "or" -> new Or(currentLine);
+            case "eq" -> new Eq(currentLine);
+            case "lt" -> new Lt(currentLine);
+            case "gt" -> new Gt(currentLine);
+            case "neg" -> new Neg(currentLine);
+            case "not" -> new Not(currentLine);
+            case "function" -> new Function(currentLine,
+                                            fields[1],
+                                            Integer.parseInt(fields[2]));
+            case "return" -> new Return(currentLine);
+            case "call" -> new Call(currentLine,
+                                    fields[1],
+                                    Integer.parseInt(fields[2]));
+            case "goto" -> new Goto(currentLine, fields[1]);
+            default -> throw new UnsupportedOperationException("Unknown command " + fields[0]);
         };
     }
 }
