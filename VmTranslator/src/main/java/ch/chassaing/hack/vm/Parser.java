@@ -71,6 +71,7 @@ public final class Parser
                                     fields[1],
                                     Integer.parseInt(fields[2]));
             case "goto" -> new Goto(currentLine, fields[1]);
+            case "if-goto" -> new IfGoto(currentLine, fields[1]);
             default -> throw new UnsupportedOperationException("Unknown command " + fields[0]);
         };
     }

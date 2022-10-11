@@ -50,6 +50,8 @@ public final class HackWriter
         } else if (command instanceof Goto aGoto) {
             add("@" + aGoto.label(),
                 "0;JEQ");
+        } else if (command instanceof IfGoto ifGoto) {
+            generateIfGoto(ifGoto);
         }
     }
 
@@ -233,6 +235,13 @@ public final class HackWriter
             "D=M",
             "@R13",
             "M=D");
+    }
+
+    private void generateIfGoto(IfGoto ifGoto) {
+
+        stackToD();
+        add("@" + ifGoto.label(),
+            "D;JNE");
     }
 
     private void popToSymbol(String symbol, int offset)
