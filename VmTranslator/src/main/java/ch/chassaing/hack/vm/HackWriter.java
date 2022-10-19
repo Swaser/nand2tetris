@@ -15,9 +15,12 @@ public final class HackWriter
                    Segment.THAT, "@THAT");
 
     private final List<String> instructions = new LinkedList<>();
-    private       int          contCounter  = 0;
-    private       int          compCounter  = 0;
-    private       String       progName;
+
+    private       String currentFunction = "global";
+    private       int    retCounter      = 0;
+    private       int    compCounter     = 0;
+    private       int            contCounter     = 0;
+    private       String         progName;
 
     /**
      * Startet einen neuen HackWriter und fügt den Bootstrap code ein,
@@ -28,8 +31,8 @@ public final class HackWriter
         if (isComplete) {
             // SP auf 256 setzen
             add("@256", "D=A", "@SP", "M=D");
-            // Sys.init aufrufen
-            generateCall(new Call(-1, "Sys.init", 0));
+            //generateCall(new Call(-1, "Sys.init", 0));
+            add("@Sys.init", "0;JEQ");
         }
     }
 
@@ -135,8 +138,8 @@ public final class HackWriter
      */
     private void generateCompare(String jumpInstruction)
     {
-        String contLabel = "CONTINUE." + contCounter++;
-        String compLabel = "COMP." + compCounter++;
+        String contLabel = currentFunction + "$cont." + contCounter++;
+        String compLabel = currentFunction + "$comp." + compCounter++;
 
         stackToD();        // first = y -> D
         stackToM();        // second = x -> M
@@ -167,6 +170,7 @@ public final class HackWriter
 
     private void generateFunction(Function function)
     {
+        enterFunction(function.name());
         add("(" + function.name() + ")");
         // Die lokalen Variablen mit 0 initialisieren
         if (function.nVars() > 0) {
@@ -177,7 +181,8 @@ public final class HackWriter
 
     private void generateCall(Call call)
     {
-        String returnLabel = call.function() + "$ret";
+        // current function
+        String returnLabel = currentFunction + "$ret." + retCounter++;
 
         // Rücksprungadresse auf den Stack
         add("@" + returnLabel,
@@ -211,9 +216,18 @@ public final class HackWriter
 
         add("(" + returnLabel + ")");
 
-        // SP zeigt jetzt auf 1 nach dem letzten Argument
-        // Das letzte Element auf dem Stack soll nun aber der Return Wert sein, der beim ersten Argument steht
-        // --> SP = SP - nArgs + 1
+        /*
+        SP zeigt jetzt auf 1 nach dem letzten Argument, da als Letztes die retAddr gepopt wurde
+        ARG[0]
+        ARG[1] <- SP sollte hier sein
+        ...
+        ARG[N]
+        retAddr <- SP ist aber nach dem Rücksprung hier
+        LCL'
+        ARG'
+        ...
+        Nun soll der SP aber auf 1 nach dem return Wert (der in ARG[0] ist) zeigen --> SP = SP - nArgs + 1
+         */
         int remaining = call.nArgs() - 1;
         if (remaining > 0) {
             add("@SP");
@@ -225,16 +239,29 @@ public final class HackWriter
 
     private void generateReturn()
     {
-
-        // return value to (ARG)
+        // Kopiert den return Wert nach ARG[0]
         popToSymbol("@ARG", 0);
 
-        // set SP to LCL
+        /*
+        Setzt den SP auf LCL[0], d.h. der Stack sieht dann so aus:
+        ARG[0]
+        ...
+        ARG[N]
+        retAddr
+        LCL'
+        ARG'
+        THIS'
+        THAT'
+        LCL[0] <- SP
+        ...
+        LCL[M]
+         */
         add("@LCL",
             "D=M",
             "@SP",
             "M=D");
 
+        // popt THAT, THIS, ARG und LCL
         stackToD();
         add("@THAT", "M=D");
         stackToD();
@@ -244,15 +271,13 @@ public final class HackWriter
         stackToD();
         add("@LCL", "M=D");
 
-        // LCL to Temp (R13)
-        add("@LCL",
-            "D=M",
-            "@R13",
-            "M=D");
+        // popt die return Adresse nach M und macht den Sprung
+        stackToM();
+        add("A=M", "0;JEQ");
     }
 
-    private void generateIfGoto(IfGoto ifGoto) {
-
+    private void generateIfGoto(IfGoto ifGoto)
+    {
         stackToD();
         add("@" + ifGoto.label(),
             "D;JNE");
@@ -340,5 +365,12 @@ public final class HackWriter
     private void add(String... someInstructions)
     {
         Collections.addAll(instructions, someInstructions);
+    }
+
+    private void enterFunction(String functionName) {
+        currentFunction = functionName;
+        retCounter = 0;
+        compCounter = 0;
+        contCounter = 0;
     }
 }

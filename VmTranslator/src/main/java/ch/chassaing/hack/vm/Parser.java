@@ -15,7 +15,7 @@ public final class Parser
         implements IParser
 {
     private final ArrayList<String> lines;
-    private       int               currentLine = -1;
+    private       int               currentLine = 0;
     private       String[]          fields;
 
     public Parser(File file)
@@ -33,8 +33,8 @@ public final class Parser
     @Override
     public int advance()
     {
-        while (++currentLine < lines.size()) {
-            String nextLine = StringUtils.trim(lines.get(currentLine));
+        while (currentLine++ < lines.size()) {
+            String nextLine = StringUtils.trim(lines.get(currentLine-1)); // lines[] ist 0-basiert
             if (nextLine.startsWith("//") || StringUtils.isBlank(nextLine)) {
                 continue;
             }

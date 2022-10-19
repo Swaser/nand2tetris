@@ -25,7 +25,7 @@ public class Main
         List<File> inPaths = new LinkedList<>();
         if (inFile.isDirectory()) {
             // code for directories
-            outPath = Path.of(args[0], args[0] + ".asm");
+            outPath = Path.of(args[0], StringUtils.removeEnd(args[0], "/") + ".asm");
             File[] files = inFile.listFiles(file -> file.isFile() && file.getName().endsWith(".vm"));
             if (files == null) {
                 System.err.println("Problem reading the folder " + inFile);
@@ -60,6 +60,7 @@ public class Main
                     try {
                         codeWriter.add(parser.command());
                     } catch (Exception e) {
+                        e.printStackTrace();
                         System.out.printf("%s - %d: %s%n", vmFilePath, line, e.getMessage());
                         System.exit(3);
                     }

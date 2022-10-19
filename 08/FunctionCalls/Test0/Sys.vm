@@ -1,0 +1,23 @@
+function Sys.init 0
+push constant 123
+call Main.main 1
+label WHILE
+goto WHILE
+
+function Main.main 3
+push argument 0
+pop local 0
+push argument 0
+push constant 1
+add
+pop local 1
+push argument 0
+push constant 2
+add
+pop local 2
+push local 0
+push local 1
+push local 2
+add
+add
+return
