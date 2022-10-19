@@ -4,6 +4,8 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.io.*;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -11,31 +13,48 @@ public class Main
 {
     public static void main(String[] args)
     {
-        List<Path> vmFilePaths = new LinkedList<>();
-        for (String vmFilename : args) {
-            if (!vmFilename.endsWith(".vm")) {
-                System.out.println("File must end with .vm");
+        if (args.length != 1) {
+            System.out.println("Need exactly one argument (VM file or folder)");
+            System.exit(1);
+            return;
+        }
+
+        File inFile = Paths.get(args[0]).toFile();
+
+        Path outPath;
+        List<File> inPaths = new LinkedList<>();
+        if (inFile.isDirectory()) {
+            // code for directories
+            outPath = Path.of(args[0], args[0] + ".asm");
+            File[] files = inFile.listFiles(file -> file.isFile() && file.getName().endsWith(".vm"));
+            if (files == null) {
+                System.err.println("Problem reading the folder " + inFile);
                 System.exit(1);
+                return;
             }
-            String firstChar = vmFilename.substring(0, 1);
-            if (!firstChar.equals(firstChar.toUpperCase())) {
-                System.out.println("File must start with an uppercase letter");
+            inPaths.addAll(Arrays.asList(files));
+            if (inPaths.stream().noneMatch(file -> file.getName().equals("Sys.vm"))) {
+                System.err.println("A complete program must have a Sys.vm module");
                 System.exit(1);
+                return;
             }
-            vmFilePaths.add(Path.of(vmFilename));
+        } else if (inFile.isFile() && args[0].endsWith(".vm")) {
+            outPath = Path.of(args[0].replace(".vm", ".asm"));
+            inPaths.add(inFile);
+        } else {
+            System.err.println("Need exactly one argument (VM file or folder)");
+            System.exit(1);
+            return;
         }
 
         // name of the first input file determines the name of the assembly file
-        Path outFile = Path.of(args[0].replace(".vm", ".asm"));
-        ICodeWriter codeWriter = new HackWriter();
+        ICodeWriter codeWriter = new HackWriter(inFile.isDirectory());
 
-        try (OutputStreamWriter writer = openForWriting(outFile)) {
+        try (OutputStreamWriter writer = openForWriting(outPath)) {
             int iCount = 0;
-            for (Path vmFilePath : vmFilePaths) {
+            for (File vmFilePath : inPaths) {
                 IParser parser = new Parser(vmFilePath);
-                codeWriter.setProgName(vmFilePath.getFileName()
-                                                 .toString()
-                                                 .replace(".vm", ""));
+                codeWriter.setProgName(vmFilePath.getName().replace(".vm", ""));
                 int line;
                 while ((line = parser.advance()) > 0) {
                     try {
@@ -54,7 +73,7 @@ public class Main
                 writer.write(System.lineSeparator());
             }
         } catch (IOException e) {
-            System.err.println("Problem writing to file " + outFile);
+            System.err.println("Problem writing to file " + outPath);
             e.printStackTrace();
             System.exit(2);
         }

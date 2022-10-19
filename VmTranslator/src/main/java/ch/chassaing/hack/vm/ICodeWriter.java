@@ -14,5 +14,8 @@ public interface ICodeWriter
 
     void add(Command command);
 
+    /**
+     * Will output all instructions added to it plus the necessary bootstrap code.
+     */
     Iterable<String> getInstructions();
 }

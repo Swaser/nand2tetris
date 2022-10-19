@@ -4,11 +4,11 @@ import ch.chassaing.hack.vm.command.*;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
 import java.util.ArrayList;
 
 public final class Parser
@@ -18,13 +18,13 @@ public final class Parser
     private       int               currentLine = -1;
     private       String[]          fields;
 
-    public Parser(Path file)
+    public Parser(File file)
     {
         lines = new ArrayList<>();
-        try (InputStream is = IOUtils.toBufferedInputStream(new FileInputStream(file.toFile()))) {
+        try (InputStream is = IOUtils.toBufferedInputStream(new FileInputStream(file))) {
             lines.addAll(IOUtils.readLines(is, StandardCharsets.UTF_8));
         } catch (IOException e) {
-            System.err.println("Problem reading file " + file);
+            System.err.println("Problem reading file " + file.getName());
             e.printStackTrace();
             System.exit(2);
         }
@@ -70,6 +70,7 @@ public final class Parser
             case "call" -> new Call(currentLine,
                                     fields[1],
                                     Integer.parseInt(fields[2]));
+            case "label" -> new Label(currentLine, fields[1]);
             case "goto" -> new Goto(currentLine, fields[1]);
             case "if-goto" -> new IfGoto(currentLine, fields[1]);
             default -> throw new UnsupportedOperationException("Unknown command " + fields[0]);

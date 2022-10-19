@@ -19,6 +19,20 @@ public final class HackWriter
     private       int          compCounter  = 0;
     private       String       progName;
 
+    /**
+     * Startet einen neuen HackWriter und fügt den Bootstrap code ein,
+     * falls es sich um ein volles Program (mit Sys Modul) handelt.
+     */
+    public HackWriter(boolean isComplete)
+    {
+        if (isComplete) {
+            // SP auf 256 setzen
+            add("@256", "D=A", "@SP", "M=D");
+            // Sys.init aufrufen
+            generateCall(new Call(-1, "Sys.init", 0));
+        }
+    }
+
     @Override
     public void setProgName(String progName)
     {
