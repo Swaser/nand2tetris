@@ -16,11 +16,11 @@ public final class HackWriter
 
     private final List<String> instructions = new LinkedList<>();
 
-    private       String currentFunction = "global";
-    private       int    retCounter      = 0;
-    private       int    compCounter     = 0;
-    private       int            contCounter     = 0;
-    private       String         progName;
+    private String currentFunction = "global";
+    private int retCounter = 0;
+    private int compCounter = 0;
+    private int contCounter = 0;
+    private String progName;
 
     /**
      * Startet einen neuen HackWriter und fügt den Bootstrap code ein,
@@ -367,7 +367,8 @@ public final class HackWriter
         Collections.addAll(instructions, someInstructions);
     }
 
-    private void enterFunction(String functionName) {
+    private void enterFunction(String functionName)
+    {
         currentFunction = functionName;
         retCounter = 0;
         compCounter = 0;
