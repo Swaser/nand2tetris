@@ -5,6 +5,7 @@ import kotlin.text.StringBuilder
 
 class Tokenizer(
     private val input: BufferedReader,
+    private val buffer : CharArray = CharArray(128),
     private var currentToken: TokenType? = null
 ) {
 
@@ -70,7 +71,7 @@ class Tokenizer(
      * Falls kein nächstes Zeichen existiert wird das aktuelle Zeichen null und
      * es wird null zurückgegeben.
      */
-    private fun nextChar(): Char? {
+    internal fun nextChar(): Char? {
 
         if (++currentIdx >= nRead) {
             currentIdx = 0
@@ -80,7 +81,7 @@ class Tokenizer(
         return currentChar()
     }
 
-    private fun peekNext(): Char? {
+    internal fun peekNext(): Char? {
 
         var nextIdx : Int = currentIdx + 1
         if (nextIdx >= nRead) {
@@ -102,7 +103,6 @@ class Tokenizer(
 
     companion object {
 
-        private val buffer = CharArray(128)
         private var nRead = -1
         private val sb = StringBuilder()
 
