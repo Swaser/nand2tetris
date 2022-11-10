@@ -5,8 +5,7 @@ import kotlin.text.StringBuilder
 
 class Tokenizer(
     private val input: BufferedReader,
-    private val buffer : CharArray = CharArray(128),
-    private var currentToken: TokenType? = null
+    var currentToken: Token? = null
 ) {
 
     /**
@@ -14,7 +13,7 @@ class Tokenizer(
      * macht dieses zum aktuellen Token, falls vorhanden.
      * @return Wahr, wenn noch ein Token gelesen werden konnte, sonst Falsch
      */
-    fun advance(): Boolean {
+    fun advance(): Token? {
 
         var c : Char?
         do {
@@ -24,25 +23,18 @@ class Tokenizer(
         if (c == null) {
             // Ende erreicht
             currentToken = null
-            return false
+            return null
         }
 
-        readToken()
-        return true
-    }
-    /**
-     * Gibt den Typ des aktuellen Tokens aus.
-     * @throws NoSuchElementException, falls kein aktuelles Token vorhanden ist
-     */
-    fun tokenType(): TokenType {
-        return currentToken ?: throw NoSuchElementException("No current token")
+        return readToken()
     }
 
     /**
-     * Liest das nächste Token ein und macht es zum aktuellen Token. Das aktuelle
-     * Zeichen ist das nächste nicht-Whitespace.
+     * Liest das nächste Token ein und macht es zum aktuellen Token. Wenn diese
+     * Methode aufgerufen wird, dann muss das aktuelle Zeichen, das erste Zeichen
+     * des nächsten Tokens sein.
      */
-    private fun readToken() {
+    private fun readToken() : Token {
 
         var c : Char? = currentChar()
         if (c == null) {
@@ -63,6 +55,8 @@ class Tokenizer(
             // nun mit Keyword vergleichen
         }
 
+
+        throw NotImplementedError("Noch nicht fertig implementiert")
     }
 
 
@@ -103,6 +97,7 @@ class Tokenizer(
 
     companion object {
 
+        private val buffer = CharArray(128)
         private var nRead = -1
         private val sb = StringBuilder()
 

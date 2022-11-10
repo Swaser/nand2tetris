@@ -1,6 +1,6 @@
 package ch.chassaing.jack
 
-enum class Keyword {
+enum class KeywordType {
 
     CLASS,
     METHOD,

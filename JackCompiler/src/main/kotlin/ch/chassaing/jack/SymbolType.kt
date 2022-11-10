@@ -1,6 +1,6 @@
 package ch.chassaing.jack
 
-enum class Symbol(val c : Char)  {
+enum class SymbolType(val c : Char)  {
 
     LEFT_BRACE('{'), RIGHT_BRACE('}'),
     LEFT_PAREN('('), RIGHT_PAREN(')'),
