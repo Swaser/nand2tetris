@@ -5,7 +5,9 @@ import kotlin.text.StringBuilder
 
 class Tokenizer(
     private val input: BufferedReader,
-    var currentToken: Token? = null
+    var currentToken: Token? = null,
+    private val buffer: CharArray = CharArray(128),
+    private var nRead: Int = -1,
 ) {
 
     /**
@@ -15,7 +17,7 @@ class Tokenizer(
      */
     fun advance(): Token? {
 
-        var c : Char?
+        var c: Char?
         do {
             c = nextChar()
         } while (c != null && isWhitespace(c))
@@ -34,29 +36,62 @@ class Tokenizer(
      * Methode aufgerufen wird, dann muss das aktuelle Zeichen, das erste Zeichen
      * des nächsten Tokens sein.
      */
-    private fun readToken() : Token {
+    private fun readToken(): Token {
 
-        var c : Char? = currentChar()
-        if (c == null) {
-            throw IllegalStateException("readToken() called without more input")
-        }
+        val c: Char = currentChar() ?: throw IllegalStateException("readToken() called without more input")
 
-        sb.clear()
         if (isLetter(c) || c == '_') {
-            // entweder Keyword oder Identifier
-            sb.append(c)
-            while (true) {
-                c = peekNext()
-                if (c != null && isAlphaNumeric(c)) {
-                    sb.append(c)
-                    nextChar()
-                }
-            }
-            // nun mit Keyword vergleichen
+            return parseKeywordOrIdentifier()
         }
-
 
         throw NotImplementedError("Noch nicht fertig implementiert")
+    }
+
+    /**
+     * Vorbedingung: Das aktuelle Zeichen ist ein Buchstabe oder ein Unterstrich.
+     * Dann liest diese Methode alle Zeichen die zu einem Keyword oder Identifier
+     * passen und bestimmt danach das Token.
+     * Nachbedingung: Das Token ist gefunden und das aktuelle Zeichen ist das letzte
+     * Zeichen des Tokens.
+     */
+    private fun parseKeywordOrIdentifier(): Token {
+
+        val content = slurpWhile { isAlphaNumeric(it) }
+
+        for (keyword in KeywordType.values()) {
+            if (keyword.name.lowercase() == content) {
+                currentToken = Token.Keyword(keyword)
+                return currentToken!!
+            }
+        }
+        currentToken = Token.Identifier(content)
+        return currentToken!!
+    }
+
+    /**
+     * Liest Zeichen aus dem BufferedReader solange es hat und sie dem
+     * predicate entsprechen.
+     * Vorbedingung: Das aktuelle Zeichen erfüllt die Bedingung
+     * Nachbedingung: Das aktuelle Zeichen ist das letzte Zeichen aus der ununterbrochenen Kette,
+     * das die Bedingung erfüllt
+     */
+    private fun slurpWhile(predicate: (c: Char) -> Boolean): String {
+
+        var c = currentChar()
+        if (c == null || !predicate.invoke(c)) {
+            return ""
+        }
+        val sb = StringBuilder().append(c)
+        while (true) {
+            c = peekNext()
+            if (c != null && predicate.invoke(c)) {
+                sb.append(c)
+                nextChar()
+            } else {
+                break
+            }
+        }
+        return sb.toString()
     }
 
 
@@ -77,13 +112,14 @@ class Tokenizer(
 
     internal fun peekNext(): Char? {
 
-        var nextIdx : Int = currentIdx + 1
+        var nextIdx: Int = currentIdx + 1
         if (nextIdx >= nRead) {
-            val currentChar = currentChar() ?: throw IllegalStateException("peekNext() called without valid current char")
+            val currentChar =
+                currentChar() ?: throw IllegalStateException("peekNext() called without valid current char")
             buffer[0] = currentChar
             currentIdx = 0
             nextIdx = 1
-            nRead = input.read(buffer, 1, buffer.size-1) + 1
+            nRead = input.read(buffer, 1, buffer.size - 1) + 1
         }
         return if (nextIdx < nRead) buffer[nextIdx] else null
     }
@@ -97,30 +133,26 @@ class Tokenizer(
 
     companion object {
 
-        private val buffer = CharArray(128)
-        private var nRead = -1
-        private val sb = StringBuilder()
-
         /**
          * Zeigt auf das aktuell zu lesende Zeichen in buffer
          */
         private var currentIdx = 0
 
-        private val whiteSpace = setOf('\r','\n','\t',' ')
+        private val whiteSpace = setOf('\r', '\n', '\t', ' ')
 
-        private fun isWhitespace(c : Char): Boolean {
+        private fun isWhitespace(c: Char): Boolean {
             return whiteSpace.contains(c)
         }
 
-        private fun isAlphaNumeric(c : Char) : Boolean {
+        private fun isAlphaNumeric(c: Char): Boolean {
             return c == '_' || isLetter(c) || isDigit(c)
         }
 
-        private fun isLetter(c : Char): Boolean {
-            return c in 'a'.. 'Z'
+        private fun isLetter(c: Char): Boolean {
+            return c in 'a'..'Z'
         }
 
-        private fun isDigit(c : Char): Boolean {
+        private fun isDigit(c: Char): Boolean {
             return c in '0'..'9'
         }
 
