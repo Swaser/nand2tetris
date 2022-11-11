@@ -2,13 +2,13 @@ package ch.chassaing.jack
 
 sealed interface Token {
 
-    class Keyword(val type: KeywordType) : Token
+    data class Keyword(val type: KeywordType) : Token
 
-    class Symbol(val type: SymbolType) : Token
+    data class Symbol(val type: SymbolType) : Token
 
-    class Identifier(val label: String) : Token
+    data class Identifier(val label: String) : Token
 
-    class IntConstant(val value: Int) : Token
+    data class IntConstant(val value: Int) : Token
 
-    class StringConstant(val value: String) : Token
+    data class StringConstant(val value: String) : Token
 }

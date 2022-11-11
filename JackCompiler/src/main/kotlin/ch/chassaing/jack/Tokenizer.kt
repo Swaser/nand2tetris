@@ -5,9 +5,10 @@ import kotlin.text.StringBuilder
 
 class Tokenizer(
     private val input: BufferedReader,
-    var currentToken: Token? = null,
+    private var currentToken: Token? = null,
     private val buffer: CharArray = CharArray(128),
     private var nRead: Int = -1,
+    private var currentIdx : Int = -1
 ) {
 
     /**
@@ -17,10 +18,11 @@ class Tokenizer(
      */
     fun advance(): Token? {
 
-        var c: Char?
-        do {
-            c = nextChar()
-        } while (c != null && isWhitespace(c))
+        var c: Char? = peekNext()
+        while (c != null && isWhitespace(c)) {
+            nextChar()
+            c = peekNext()
+        }
 
         if (c == null) {
             // Ende erreicht
@@ -38,15 +40,17 @@ class Tokenizer(
      */
     private fun readToken(): Token {
 
-        val c: Char = currentChar() ?: throw IllegalStateException("readToken() called without more input")
+        val c: Char = peekNext() ?: throw IllegalStateException("readToken() called without more input")
 
         if (isLetter(c) || c == '_') {
             return parseKeywordOrIdentifier()
         } else if (c == '"') {
             return parseStringConstant()
+        } else if (isDigit(c)) {
+            return parseIntegerConstant()
+        } else {
+            return parseSymbol()
         }
-
-        throw NotImplementedError("Noch nicht fertig implementiert")
     }
 
     /**
@@ -72,27 +76,45 @@ class Tokenizer(
 
     private fun parseStringConstant() : Token {
 
-        // aktuelles Zeichen ist Anführungszeichen
-        var c = nextChar() ?: throw
+        // Konsumiere das nächste Zeichen
+        val c = nextChar()
+        if (c == null || c != '"') {
+            throw IllegalStateException("Nächstes Zeichen muss ein Anführungszeichen sein: $c")
+        }
 
+        val content = slurpWhile { it != '"' }
+        nextChar() // wir konsumieren auch noch das hintere Anführungszeichen
+        return Token.StringConstant(content)
+    }
+
+    private fun parseIntegerConstant() : Token {
+
+        val content = slurpWhile { isDigit(it) }
+        return Token.IntConstant(content.toInt(10))
+    }
+
+    private fun parseSymbol() : Token {
+
+        val c = nextChar() ?: throw IllegalStateException("Kein nächstes Zeichen vorhanden")
+        for (symbol in SymbolType.values()) {
+            if (c == symbol.c) {
+                return Token.Symbol(symbol)
+            }
+        }
+        throw IllegalStateException("$c ist kein Symbol")
     }
 
     /**
      * Liest Zeichen aus dem BufferedReader solange es hat und sie dem
      * predicate entsprechen.
-     * Vorbedingung: Das aktuelle Zeichen ist nicht null erfüllt die Bedingung
      * Nachbedingung: Das aktuelle Zeichen ist das letzte Zeichen aus der ununterbrochenen Kette,
      * das die Bedingung erfüllt
      */
     private fun slurpWhile(predicate: (c: Char) -> Boolean): String {
 
-        var c = currentChar()
-        if (c == null || !predicate.invoke(c)) {
-            throw IllegalStateException("Aktuelles Zeichen darf nicht null sein und muss die Bedingung erfüllen: $c")
-        }
-        val sb = StringBuilder().append(c)
+        val sb = StringBuilder()
         while (true) {
-            c = peekNext()
+            val c = peekNext()
             if (c != null && predicate.invoke(c)) {
                 sb.append(c)
                 nextChar()
@@ -103,11 +125,11 @@ class Tokenizer(
         return sb.toString()
     }
 
-
     /**
      * Macht das nächste Zeichen zum aktuellen Zeichen und gibt es zurück.
      * Falls kein nächstes Zeichen existiert wird das aktuelle Zeichen null und
      * es wird null zurückgegeben.
+     * Vorbedingung: currentIdx ist nie kleiner als -1
      */
     internal fun nextChar(): Char? {
 
@@ -124,14 +146,20 @@ class Tokenizer(
      */
     internal fun peekNext(): Char? {
 
-        var nextIdx: Int = currentIdx + 1
+        var nextIdx = currentIdx + 1
         if (nextIdx >= nRead) {
-            val currentChar =
-                currentChar() ?: throw IllegalStateException("peekNext() called without valid current char")
-            buffer[0] = currentChar
-            currentIdx = 0
-            nextIdx = 1
-            nRead = input.read(buffer, 1, buffer.size - 1) + 1
+            if (currentIdx < 0) {
+                // Sonderfall, dass noch gar nichts gelesen wurde
+                nRead = input.read(buffer)
+            } else {
+                // Falls wir schon was gelesen haben, merken wir uns das aktuelle Zeichen
+                val currentChar =
+                    currentChar() ?: throw IllegalStateException("peekNext() called without valid current char")
+                buffer[0] = currentChar
+                currentIdx = 0
+                nextIdx = 1
+                nRead = input.read(buffer, 1, buffer.size - 1) + 1
+            }
         }
         return if (nextIdx < nRead) buffer[nextIdx] else null
     }
@@ -145,11 +173,6 @@ class Tokenizer(
 
     companion object {
 
-        /**
-         * Zeigt auf das aktuell zu lesende Zeichen in buffer
-         */
-        private var currentIdx = 0
-
         private val whiteSpace = setOf('\r', '\n', '\t', ' ')
 
         private fun isWhitespace(c: Char): Boolean {
@@ -161,12 +184,11 @@ class Tokenizer(
         }
 
         private fun isLetter(c: Char): Boolean {
-            return c in 'a'..'Z'
+            return c.isLetter()
         }
 
         private fun isDigit(c: Char): Boolean {
             return c in '0'..'9'
         }
-
     }
 }

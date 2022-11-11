@@ -24,4 +24,23 @@ internal class TokenizerTest {
         assertNull(tokenizer.nextChar())
         assertNull(tokenizer.nextChar())
     }
+
+    @Test
+    fun aProgram() {
+        val text = """
+            Zlet c = 1
+            if (c = 2) {
+              blueWhale(33)
+            }
+        """.trimIndent()
+
+        val sut = Tokenizer(BufferedReader(StringReader(text)))
+        var token : Token?
+        do {
+            token = sut.advance()
+            if (token != null) {
+                println(token)
+            }
+        } while (token != null)
+    }
 }
