@@ -42,6 +42,8 @@ class Tokenizer(
 
         if (isLetter(c) || c == '_') {
             return parseKeywordOrIdentifier()
+        } else if (c == '"') {
+            return parseStringConstant()
         }
 
         throw NotImplementedError("Noch nicht fertig implementiert")
@@ -66,6 +68,13 @@ class Tokenizer(
         }
         currentToken = Token.Identifier(content)
         return currentToken!!
+    }
+
+    private fun parseStringConstant() : Token {
+
+        // aktuelles Zeichen ist Anführungszeichen
+        var c = nextChar() ?: throw
+
     }
 
     /**
@@ -110,6 +119,9 @@ class Tokenizer(
         return currentChar()
     }
 
+    /**
+     * Schaut auf das nächste Zeichen und gibt es zurück.
+     */
     internal fun peekNext(): Char? {
 
         var nextIdx: Int = currentIdx + 1
