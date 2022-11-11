@@ -80,7 +80,7 @@ class Tokenizer(
     /**
      * Liest Zeichen aus dem BufferedReader solange es hat und sie dem
      * predicate entsprechen.
-     * Vorbedingung: Das aktuelle Zeichen erfüllt die Bedingung
+     * Vorbedingung: Das aktuelle Zeichen ist nicht null erfüllt die Bedingung
      * Nachbedingung: Das aktuelle Zeichen ist das letzte Zeichen aus der ununterbrochenen Kette,
      * das die Bedingung erfüllt
      */
@@ -88,7 +88,7 @@ class Tokenizer(
 
         var c = currentChar()
         if (c == null || !predicate.invoke(c)) {
-            return ""
+            throw IllegalStateException("Aktuelles Zeichen darf nicht null sein und muss die Bedingung erfüllen: $c")
         }
         val sb = StringBuilder().append(c)
         while (true) {
