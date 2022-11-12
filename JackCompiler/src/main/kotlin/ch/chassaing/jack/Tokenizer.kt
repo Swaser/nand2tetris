@@ -5,11 +5,14 @@ import kotlin.text.StringBuilder
 
 class Tokenizer(
     private val input: BufferedReader,
-    private var currentToken: Token? = null,
     private val buffer: CharArray = CharArray(128),
-    private var nRead: Int = -1,
-    private var currentIdx : Int = -1
 ) {
+    var currentToken : Token? = null
+        private set
+
+    private var nRead = -1
+
+    private var currentIdx = -1
 
     /**
      * Schreitet in der Eingabe zum nächsten Token voran und

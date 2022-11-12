@@ -29,6 +29,7 @@ internal class TokenizerTest {
     fun aProgram() {
         val text = """
             Zlet c = 1
+            let d = 2
             if (c = 2) {
               blueWhale(33)
             }
