@@ -1,6 +1,5 @@
 package ch.chassaing.jack
 
-import java.io.BufferedReader
 import java.io.File
 
 fun main(args: Array<String>) {

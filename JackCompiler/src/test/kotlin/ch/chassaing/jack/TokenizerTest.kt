@@ -11,7 +11,7 @@ internal class TokenizerTest {
     fun peekOnExhaustedBuffer() {
 
         val reader = BufferedReader(StringReader("gaga"))
-        val tokenizer = Tokenizer(reader, buffer = CharArray(2))
+        val tokenizer = Tokenizer(reader)
 
         assertEquals('g', tokenizer.nextChar())
         assertEquals('a', tokenizer.peekNext())

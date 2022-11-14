@@ -6,14 +6,8 @@ import kotlin.text.StringBuilder
 class Tokenizer(
     private val input: BufferedReader,
 ) {
-    var currentToken : Token? = null
+    var currentToken: Token? = null
         private set
-
-    /**
-     * Die aktuelle Zeile, die vom Tokenizer verarbeitet wird
-     */
-    private var line : String? = null
-    private var index : Int = -1
 
     /**
      * Schreitet in der Eingabe zum nächsten Token voran und
@@ -22,31 +16,46 @@ class Tokenizer(
      */
     fun advance(): Token? {
 
-        var isComment = false
-        var c : Char? = peekNext()
-        while (c )
+        var c = nextChar()
+        while (c != null) {
+            if (c.isWhitespace()) {
+                c = nextChar()
+                continue
+            } else if (c == '/') {
+                val next = peekNext()
+                if (next == '/') {
+                    // Zeilenkommentar, d.h. Rest der Zeile wird ignoriert
+                    nextLine()
+                    c = currentChar()
+                    continue
+                } else if (next == '*') {
+                    var endFound = false
+                    while (!endFound) {
+                        slurpWhile { it != '*' }
+                        nextChar() // akutelles Zeichen ist nun *
+                        if (peekNext() == '/') {
+                            nextChar()
+                            endFound = true
+                        }
+                    }
+                    continue
+                }
+            }
 
-        return readToken()
-    }
+            if (isLetter(c) || c == '_') {
+                return parseKeywordOrIdentifier()
+            } else if (c == '"') {
+                return parseStringConstant()
+            } else if (isDigit(c)) {
+                return parseIntegerConstant()
+            }
 
-    /**
-     * Liest das nächste Token ein und macht es zum aktuellen Token. Wenn diese
-     * Methode aufgerufen wird, dann muss das aktuelle Zeichen, das erste Zeichen
-     * des nächsten Tokens sein.
-     */
-    private fun readToken(): Token {
-
-        val c: Char = peekNext() ?: throw IllegalStateException("readToken() called without more input")
-
-        if (isLetter(c) || c == '_') {
-            return parseKeywordOrIdentifier()
-        } else if (c == '"') {
-            return parseStringConstant()
-        } else if (isDigit(c)) {
-            return parseIntegerConstant()
-        } else {
+            // Die anderen Möglichkeiten sind erschöpft --> Symbol
             return parseSymbol()
         }
+
+        // Hier ist c == null, d.h. es gibt keine Zeichen mehr
+        return null
     }
 
     /**
@@ -70,7 +79,7 @@ class Tokenizer(
         return currentToken!!
     }
 
-    private fun parseStringConstant() : Token {
+    private fun parseStringConstant(): Token {
 
         // Konsumiere das nächste Zeichen
         val c = nextChar()
@@ -83,13 +92,13 @@ class Tokenizer(
         return Token.StringConstant(content)
     }
 
-    private fun parseIntegerConstant() : Token {
+    private fun parseIntegerConstant(): Token {
 
         val content = slurpWhile { isDigit(it) }
         return Token.IntConstant(content.toInt(10))
     }
 
-    private fun parseSymbol() : Token {
+    private fun parseSymbol(): Token {
 
         val c = nextChar() ?: throw IllegalStateException("Kein nächstes Zeichen vorhanden")
         for (symbol in SymbolType.values()) {
@@ -101,40 +110,52 @@ class Tokenizer(
     }
 
     /**
-     * Liest Zeichen aus dem BufferedReader solange es hat und sie dem
-     * predicate entsprechen.
+     * Liest Zeichen ein, solange sie der Bedingung entsprechen, angefangen beim aktuellen Zeichen.
      * Nachbedingung: Das aktuelle Zeichen ist das letzte Zeichen aus der ununterbrochenen Kette,
      * das die Bedingung erfüllt
      */
     private fun slurpWhile(predicate: (c: Char) -> Boolean): String {
 
-        val sb = StringBuilder()
-        while (true) {
-            val c = peekNext()
-            if (c != null && predicate.invoke(c)) {
-                sb.append(c)
-                nextChar()
-            } else {
-                break
-            }
+        var c = currentChar()
+        if (c == null || !predicate.invoke(c)) {
+            return ""
+        }
+        val sb = StringBuilder().append(c)
+        c = peekNext()
+
+        while (c != null && predicate.invoke(c)) {
+            sb.append(c)
+            nextChar()
+            c = peekNext()
         }
         return sb.toString()
     }
 
     /**
+     * Die aktuelle Zeile, die vom Tokenizer verarbeitet wird
+     */
+    private var line: String? = null
+    private var index: Int = -1
+
+    /**
      * Macht das nächste Zeichen zum aktuellen Zeichen und gibt es zurück.
      * Falls kein nächstes Zeichen existiert wird das aktuelle Zeichen null und
      * es wird null zurückgegeben.
-     * Vorbedingung: currentIdx ist nie kleiner als -1
      */
     internal fun nextChar(): Char? {
 
-        if (++currentIdx >= nRead) {
-            currentIdx = 0
-            nRead = input.read(buffer)
+        if (line == null ||
+            ++index >= line!!.length
+        ) {
+            nextLine()
         }
 
-        return currentChar()
+        return line?.get(index)
+    }
+
+    private fun nextLine() {
+        line = input.readLine()
+        index = 0
     }
 
     /**
@@ -142,29 +163,20 @@ class Tokenizer(
      */
     internal fun peekNext(): Char? {
 
-        var nextIdx = currentIdx + 1
-        if (nextIdx >= nRead) {
-            if (currentIdx < 0) {
-                // Sonderfall, dass noch gar nichts gelesen wurde
-                nRead = input.read(buffer)
-            } else {
-                // Falls wir schon was gelesen haben, merken wir uns das aktuelle Zeichen
-                val currentChar =
-                    currentChar() ?: throw IllegalStateException("peekNext() called without valid current char")
-                buffer[0] = currentChar
-                currentIdx = 0
-                nextIdx = 1
-                nRead = input.read(buffer, 1, buffer.size - 1) + 1
-            }
+        return if (line == null) {
+            null
+        } else if (index + 1 >= line!!.length) {
+            '\n'
+        } else {
+            line!![index + 1]
         }
-        return if (nextIdx < nRead) buffer[nextIdx] else null
     }
 
     /**
      * Gibt das aktuelle Zeichen zurück
      */
     private fun currentChar(): Char? {
-        return if (currentIdx < nRead) buffer[currentIdx] else null
+        return line?.get(index)
     }
 
     companion object {
