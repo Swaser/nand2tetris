@@ -5,14 +5,15 @@ import kotlin.text.StringBuilder
 
 class Tokenizer(
     private val input: BufferedReader,
-    private val buffer: CharArray = CharArray(128),
 ) {
     var currentToken : Token? = null
         private set
 
-    private var nRead = -1
-
-    private var currentIdx = -1
+    /**
+     * Die aktuelle Zeile, die vom Tokenizer verarbeitet wird
+     */
+    private var line : String? = null
+    private var index : Int = -1
 
     /**
      * Schreitet in der Eingabe zum nächsten Token voran und
@@ -21,17 +22,9 @@ class Tokenizer(
      */
     fun advance(): Token? {
 
-        var c: Char? = peekNext()
-        while (c != null && isWhitespace(c)) {
-            nextChar()
-            c = peekNext()
-        }
-
-        if (c == null) {
-            // Ende erreicht
-            currentToken = null
-            return null
-        }
+        var isComment = false
+        var c : Char? = peekNext()
+        while (c )
 
         return readToken()
     }

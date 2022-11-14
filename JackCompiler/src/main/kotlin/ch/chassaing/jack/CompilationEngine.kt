@@ -5,6 +5,8 @@ value class Bytecode(val code: String)
 
 class CompilationEngine(private var tokenizer: Tokenizer) {
 
+    private var bytecode = mutableListOf<Bytecode>()
+
     /**
      * Geht durch die Folge von Tokens und erstellt daraus eine Liste
      * von Jack Bytecode Instruktionen. Dabei wird immer bei einer Klasse
@@ -18,24 +20,34 @@ class CompilationEngine(private var tokenizer: Tokenizer) {
             return emptyList()
         }
 
-        val result = mutableListOf<Bytecode>()
-        compileClass(result)
-        return result
+        compileClass()
+        return bytecode
     }
 
-    /**
-     * Vorbedingung: das aktuelle Token ist ein Keyword(KeywordType.CLASS) Token.
-     */
-    internal fun compileClass(mutInstructions : MutableList<Bytecode>) {
+    internal fun compileClass() {
 
-        val currentToken = tokenizer.currentToken
-        if (currentToken == null ||
-            currentToken !is Token.Keyword ||
-            currentToken.type != KeywordType.CLASS) {
+        processKeyword(KeywordType.CLASS)
+        val className = processIdentifier()
+        println("<class name=$className>")
 
-            throw IllegalStateException("Not a class")
+        println("</class>")
+    }
+
+    private fun processKeyword(keywordType: KeywordType) {
+
+        val token = tokenizer.advance() ?: throw IllegalStateException("No more tokens")
+        if (token is Token.Keyword && token.type == keywordType) {
+            return
         }
+        throw IllegalStateException("Not a ${keywordType.name} keyword: $token")
+    }
 
-        mutInstructions.add(Bytecode("pop 3"))
+    private fun processIdentifier() : String {
+
+        val token = tokenizer.advance() ?: throw IllegalStateException("No more tokens")
+        if (token is Token.Identifier) {
+            return token.label
+        }
+        throw IllegalStateException("Not an indentifier: $token")
     }
 }

@@ -1,8 +1,20 @@
 package ch.chassaing.jack
 
+import java.io.BufferedReader
+import java.io.File
+
 fun main(args: Array<String>) {
 
-    // Try adding program arguments via Run/Debug configuration.
-    // Learn more about running applications: https://www.jetbrains.com/help/idea/running-applications.html.
-    println("Program arguments: ${args.joinToString()}")
+    if (args.size != 1) {
+        println("Must have one argument")
+    }
+
+    val bufferedReader = File(args[0]).bufferedReader()
+    val tokenizer = Tokenizer(bufferedReader)
+
+    var token = tokenizer.advance()
+    while (token != null) {
+        println(token)
+        token = tokenizer.advance()
+    }
 }
