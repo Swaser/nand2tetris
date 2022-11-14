@@ -38,6 +38,7 @@ class Tokenizer(
                             endFound = true
                         }
                     }
+                    c = nextChar()
                     continue
                 }
             }
@@ -82,7 +83,7 @@ class Tokenizer(
     private fun parseStringConstant(): Token {
 
         // Konsumiere das nächste Zeichen
-        val c = nextChar()
+        val c = currentChar()
         if (c == null || c != '"') {
             throw IllegalStateException("Nächstes Zeichen muss ein Anführungszeichen sein: $c")
         }
@@ -100,7 +101,7 @@ class Tokenizer(
 
     private fun parseSymbol(): Token {
 
-        val c = nextChar() ?: throw IllegalStateException("Kein nächstes Zeichen vorhanden")
+        val c = currentChar() ?: throw IllegalStateException("Kein nächstes Zeichen vorhanden")
         for (symbol in SymbolType.values()) {
             if (c == symbol.c) {
                 return Token.Symbol(symbol)
@@ -144,18 +145,32 @@ class Tokenizer(
      */
     internal fun nextChar(): Char? {
 
-        if (line == null ||
-            ++index >= line!!.length
-        ) {
+        if (++index >= (line?.length ?: 0)) {
             nextLine()
         }
 
-        return line?.get(index)
+        return currentChar()
     }
 
     private fun nextLine() {
-        line = input.readLine()
+        line = input.readLine()?.trim()
         index = 0
+    }
+
+    /**
+     * Gibt das aktuelle Zeichen zurück, oder null, falls
+     *
+     */
+    private fun currentChar(): Char? {
+
+        if (index < 0) {
+            return '\n'
+        } else if (line == null) {
+            return null
+        } else if (line!!.isEmpty()) {
+            return '\n'
+        }
+        return line!![index]
     }
 
     /**
@@ -170,13 +185,6 @@ class Tokenizer(
         } else {
             line!![index + 1]
         }
-    }
-
-    /**
-     * Gibt das aktuelle Zeichen zurück
-     */
-    private fun currentChar(): Char? {
-        return line?.get(index)
     }
 
     companion object {
