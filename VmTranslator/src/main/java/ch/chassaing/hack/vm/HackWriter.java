@@ -1,7 +1,6 @@
 package ch.chassaing.hack.vm;
 
 import ch.chassaing.hack.vm.command.*;
-import org.apache.commons.lang3.StringUtils;
 
 import java.util.*;
 
@@ -20,7 +19,6 @@ public final class HackWriter
     private int retCounter = 0;
     private int compCounter = 0;
     private int contCounter = 0;
-    private String progName;
 
     /**
      * Startet einen neuen HackWriter und fügt den Bootstrap code ein,
@@ -37,44 +35,48 @@ public final class HackWriter
     }
 
     @Override
-    public void setProgName(String progName)
+    public List<String> getInstructions(List<Command> commands)
     {
-        this.progName = progName;
-    }
-
-    @Override
-    public void add(Command command)
-    {
-        //add("// " + command);
-        if (command instanceof Push push) {
-            generatePush(push);
-        } else if (command instanceof Pop pop) {
-            generatePop(pop);
-        } else if (command instanceof Binary binary) {
-            generateBinary(binary.op());
-        } else if (command instanceof Comparison comparison) {
-            generateCompare(comparison.jumpInstruction());
-        } else if (command instanceof Unary unary) {
-            generateUnary(unary);
-        } else if (command instanceof Function function) {
-            generateFunction(function);
-        } else if (command instanceof Return) {
-            generateReturn();
-        } else if (command instanceof Call call) {
-            generateCall(call);
-        } else if (command instanceof Label label) {
-            add("(" + label.label() + ")");
-        } else if (command instanceof Goto aGoto) {
-            add("@" + aGoto.label(),
-                "0;JEQ");
-        } else if (command instanceof IfGoto ifGoto) {
-            generateIfGoto(ifGoto);
+        for (Command command : commands) {
+            if (command instanceof Push push) {
+                generatePush(push);
+            }
+            else if (command instanceof Pop pop) {
+                generatePop(pop);
+            }
+            else if (command instanceof Binary binary) {
+                generateBinary(binary.op());
+            }
+            else if (command instanceof Comparison comparison) {
+                generateCompare(comparison.jumpInstruction());
+            }
+            else if (command instanceof Unary unary) {
+                generateUnary(unary);
+            }
+            else if (command instanceof Function function) {
+                generateFunction(function);
+            }
+            else if (command instanceof Return) {
+                generateReturn();
+            }
+            else if (command instanceof Call call) {
+                generateCall(call);
+            }
+            else if (command instanceof Label label) {
+                add("(" + label.label() + ")");
+            }
+            else if (command instanceof Goto aGoto) {
+                add("@" + aGoto.label(),
+                    "0;JEQ");
+            }
+            else if (command instanceof IfGoto ifGoto) {
+                generateIfGoto(ifGoto);
+            }
+            else {
+                throw new UnsupportedOperationException("Unknown command: " + command);
+            }
         }
-    }
 
-    @Override
-    public Iterable<String> getInstructions()
-    {
         return instructions;
     }
 
@@ -82,16 +84,20 @@ public final class HackWriter
     {
         if (push.segment() == Segment.CONSTANT) {
             constToD(push.value());
-        } else if (push.segment() == Segment.POINTER) {
+        }
+        else if (push.segment() == Segment.POINTER) {
             add(push.value() == 0 ? "@THIS" : "@THAT",
                 "D=M");
-        } else if (push.segment() == Segment.TEMP) {
+        }
+        else if (push.segment() == Segment.TEMP) {
             add("@R" + (5 + push.value()),
                 "D=M");
-        } else if (push.segment() == Segment.STATIC) {
-            add(staticSymbol(push.value()),
+        }
+        else if (push.segment() == Segment.STATIC) {
+            add(staticSymbol(push.filename(), push.value()),
                 "D=M");
-        } else {
+        }
+        else {
             segmentToD(push.segment(), push.value());
         }
         toStack("D");
@@ -103,26 +109,26 @@ public final class HackWriter
             stackToD();
             add(pop.value() == 0 ? "@THIS" : "@THAT",
                 "M=D");
-        } else if (pop.segment() == Segment.TEMP) {
+        }
+        else if (pop.segment() == Segment.TEMP) {
             stackToD();
             add("@R" + (5 + pop.value()),
                 "M=D");
-        } else if (pop.segment() == Segment.STATIC) {
+        }
+        else if (pop.segment() == Segment.STATIC) {
             stackToD();
-            add(staticSymbol(pop.value()),
+            add(staticSymbol(pop.filename(), pop.value()),
                 "M=D");
-        } else {
+        }
+        else {
             popToSymbol(SEGMENT_SYMBOLS.get(pop.segment()),
                         pop.value());
         }
     }
 
-    private String staticSymbol(int value)
+    private String staticSymbol(String filename, int value)
     {
-        if (StringUtils.isBlank(progName)) {
-            throw new IllegalStateException("progName must be set");
-        }
-        return "@%s.%d".formatted(progName, value);
+        return "@%s.%d".formatted(filename, value);
     }
 
     private void generateBinary(String op)
@@ -290,12 +296,14 @@ public final class HackWriter
             add(symbol,
                 "A=M", // pointer dereferenzieren
                 "M=D");
-        } else if (offset == 1) {
+        }
+        else if (offset == 1) {
             stackToD();
             add(symbol,
                 "A=M+1", // pointer dereferenzieren
                 "M=D");
-        } else {
+        }
+        else {
             add("@" + offset, "D=A"); // Offset in D
             add(symbol, "D=M+D");     // Adresse in D
             add("@R13", "M=D");       // Adresse in R13
@@ -321,11 +329,14 @@ public final class HackWriter
         String symbol = SEGMENT_SYMBOLS.get(segment);
         if (offset == 0) {
             add(symbol, "A=M", "D=M");
-        } else if (offset == 1) {
+        }
+        else if (offset == 1) {
             add(symbol, "A=M+1", "D=M");
-        } else if (offset == 2) {
+        }
+        else if (offset == 2) {
             add(symbol, "A=M+1", "A=A+1", "D=M");
-        } else {
+        }
+        else {
             add("@" + offset,
                 "D=A",
                 symbol,

@@ -14,4 +14,10 @@ public record Function(int line,
         notBlank(name);
         greaterEqualZero(nVars);
     }
+
+    @Override
+    public String toString()
+    {
+        return "line %4d: function %s (%d local variables)".formatted(line, name, nVars);
+    }
 }

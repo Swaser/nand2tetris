@@ -7,9 +7,15 @@ import ch.chassaing.hack.vm.Segment;
  */
 public record Pop(int line,
                   Segment segment,
-                  int value)
+                  int value,
+                  String filename)
     implements Command
 {
+    public Pop(int line, Segment segment, int value)
+    {
+        this(line, segment, value, null);
+    }
+
     public Pop
     {
         if (value < 0)

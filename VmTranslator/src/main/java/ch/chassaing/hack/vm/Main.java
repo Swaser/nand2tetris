@@ -47,18 +47,18 @@ public class Main
             return;
         }
 
-        // name of the first input file determines the name of the assembly file
+        ByteCode byteCode = new PlainByteCode();
         ICodeWriter codeWriter = new HackWriter(inFile.isDirectory());
 
         try (OutputStreamWriter writer = openForWriting(outPath)) {
             int iCount = 0;
             for (File vmFilePath : inPaths) {
                 IParser parser = new Parser(vmFilePath);
-                codeWriter.setProgName(vmFilePath.getName().replace(".vm", ""));
+                byteCode.startVmFile(vmFilePath.getName().replace(".vm", ""));
                 int line;
                 while ((line = parser.advance()) > 0) {
                     try {
-                        codeWriter.add(parser.command());
+                        byteCode.add(parser.command());
                     } catch (Exception e) {
                         e.printStackTrace();
                         System.out.printf("%s - %d: %s%n", vmFilePath, line, e.getMessage());
@@ -66,7 +66,7 @@ public class Main
                     }
                 }
             }
-            Iterable<String> instructions = codeWriter.getInstructions();
+            Iterable<String> instructions = codeWriter.getInstructions(byteCode.commands());
             for (String instruction : instructions) {
                 instruction = StringUtils.trim(instruction);
                 System.out.printf("%5d: %s\n", iCount++, instruction);
