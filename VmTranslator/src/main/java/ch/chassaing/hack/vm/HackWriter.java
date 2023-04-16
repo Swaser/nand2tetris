@@ -5,7 +5,7 @@ import ch.chassaing.hack.vm.command.*;
 import java.util.*;
 
 public final class HackWriter
-        implements ICodeWriter
+        implements CodeWriter
 {
     private static final Map<Segment, String> SEGMENT_SYMBOLS =
             Map.of(Segment.ARGUMENT, "@ARG",
@@ -13,12 +13,18 @@ public final class HackWriter
                    Segment.THIS, "@THIS",
                    Segment.THAT, "@THAT");
 
-    private final List<String> instructions = new LinkedList<>();
+    /** list of commands to translate */
+    private List<Command> commands = Collections.emptyList();
+
+    /** current command index */
+    private int i;
 
     private String currentFunction = "global";
     private int retCounter = 0;
     private int compCounter = 0;
     private int contCounter = 0;
+
+    private final List<String> instructions = new LinkedList<>();
 
     /**
      * Startet einen neuen HackWriter und fügt den Bootstrap code ein,
@@ -37,7 +43,11 @@ public final class HackWriter
     @Override
     public List<String> getInstructions(List<Command> commands)
     {
-        for (Command command : commands) {
+        this.commands = new ArrayList<>(commands);
+        this.i = -1;
+
+        while (hasNext()) {
+            Command command = advance();
             if (command instanceof Push push) {
                 generatePush(push);
             }
@@ -78,6 +88,25 @@ public final class HackWriter
         }
 
         return instructions;
+    }
+
+    private boolean hasNext() {
+        return i + 1 < commands.size();
+    }
+
+    private Command advance() {
+        return commands.get(++i);
+    }
+
+    private Command preview(int n) {
+
+        if (n < 1) {
+            throw new IllegalArgumentException("n must be >= 1");
+        }
+        if (i + 1 < commands.size()) {
+            return commands.get(i + 1);
+        }
+        return null;
     }
 
     private void generatePush(Push push)

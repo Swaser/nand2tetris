@@ -48,12 +48,12 @@ public class Main
         }
 
         ByteCode byteCode = new PlainByteCode();
-        ICodeWriter codeWriter = new HackWriter(inFile.isDirectory());
+        CodeWriter codeWriter = new HackWriter(inFile.isDirectory());
 
         try (OutputStreamWriter writer = openForWriting(outPath)) {
             int iCount = 0;
             for (File vmFilePath : inPaths) {
-                IParser parser = new Parser(vmFilePath);
+                Parser parser = new SlurpingParser(vmFilePath);
                 byteCode.startVmFile(vmFilePath.getName().replace(".vm", ""));
                 int line;
                 while ((line = parser.advance()) > 0) {
