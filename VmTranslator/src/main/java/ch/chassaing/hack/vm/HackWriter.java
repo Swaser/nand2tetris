@@ -206,7 +206,7 @@ public final class HackWriter
     private void generateFunction(Function function)
     {
         enterFunction(function.name());
-        add("(" + function.name() + ")");
+        add("(" + function.name() + ")"); // label hinzufügen
         // Die lokalen Variablen mit 0 initialisieren
         if (function.nVars() > 0) {
             add("@SP");
