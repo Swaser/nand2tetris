@@ -18,6 +18,7 @@ public record Function(int line,
     @Override
     public String toString()
     {
-        return "line %4d: function %s (%d local variables)".formatted(line, name, nVars);
+        return "line %4d: function %s (%d local variables)"
+                .formatted(line, name, nVars);
     }
 }

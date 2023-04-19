@@ -13,12 +13,6 @@ public final class HackWriter
                    Segment.THIS, "@THIS",
                    Segment.THAT, "@THAT");
 
-    /** list of commands to translate */
-    private List<Command> commands = Collections.emptyList();
-
-    /** current command index */
-    private int i;
-
     private String currentFunction = "global";
     private int retCounter = 0;
     private int compCounter = 0;
@@ -35,7 +29,7 @@ public final class HackWriter
         if (isComplete) {
             // SP auf 256 setzen
             add("@256", "D=A", "@SP", "M=D");
-            //generateCall(new Call(-1, "Sys.init", 0));
+            // Sys.init aufrufen, aber da Sys.init nie zurückkehrt, braucht es keinen Call
             add("@Sys.init", "0;JEQ");
         }
     }
@@ -43,11 +37,10 @@ public final class HackWriter
     @Override
     public List<String> getInstructions(List<Command> commands)
     {
-        this.commands = new ArrayList<>(commands);
-        this.i = -1;
-
-        while (hasNext()) {
-            Command command = advance();
+        // wir benutzen cmdIdx damit wir lookahead machen können, wenn nötig
+        int cmdIdx = -1;
+        while (cmdIdx + 1 < commands.size()) {
+            Command command = commands.get(++cmdIdx);
             if (command instanceof Push push) {
                 generatePush(push);
             }
@@ -88,25 +81,6 @@ public final class HackWriter
         }
 
         return instructions;
-    }
-
-    private boolean hasNext() {
-        return i + 1 < commands.size();
-    }
-
-    private Command advance() {
-        return commands.get(++i);
-    }
-
-    private Command preview(int n) {
-
-        if (n < 1) {
-            throw new IllegalArgumentException("n must be >= 1");
-        }
-        if (i + 1 < commands.size()) {
-            return commands.get(i + 1);
-        }
-        return null;
     }
 
     private void generatePush(Push push)
@@ -249,66 +223,31 @@ public final class HackWriter
         // Sprung zur Funktion
         add("@" + call.function(), "0;JEQ");
 
+        // nun das label
         add("(" + returnLabel + ")");
-
-        /*
-        SP zeigt jetzt auf 1 nach dem letzten Argument, da als Letztes die retAddr gepopt wurde
-        ARG[0]
-        ARG[1] <- SP sollte hier sein
-        ...
-        ARG[N]
-        retAddr <- SP ist aber nach dem Rücksprung hier
-        LCL'
-        ARG'
-        ...
-        Nun soll der SP aber auf 1 nach dem return Wert (der in ARG[0] ist) zeigen --> SP = SP - nArgs + 1
-         */
-        int remaining = call.nArgs() - 1;
-        if (remaining > 0) {
-            add("@SP");
-            do {
-                add("M=M-1");
-            } while (--remaining > 0);
-        }
     }
 
     private void generateReturn()
     {
+        // Frame in R13 speichern
+        add("@LCL", "D=M", "@R13", "M=D");
+
         // Kopiert den return Wert nach ARG[0]
         popToSymbol("@ARG", 0);
 
-        /*
-        Setzt den SP auf LCL[0], d.h. der Stack sieht dann so aus:
-        ARG[0]
-        ...
-        ARG[N]
-        retAddr
-        LCL'
-        ARG'
-        THIS'
-        THAT'
-        LCL[0] <- SP
-        ...
-        LCL[M]
-         */
-        add("@LCL",
-            "D=M",
-            "@SP",
-            "M=D");
+        // Stackpointer auf ARG[1] setzen
+        add("@ARG", "D=M+1", "@SP", "M=D");
 
-        // popt THAT, THIS, ARG und LCL
-        stackToD();
-        add("@THAT", "M=D");
-        stackToD();
-        add("@THIS", "M=D");
-        stackToD();
-        add("@ARG", "M=D");
-        stackToD();
-        add("@LCL", "M=D");
-
-        // popt die return Adresse nach M und macht den Sprung
-        stackToM();
-        add("A=M", "0;JEQ");
+        add("@R13", "M=M-1"); // R13 ist frame - 1
+        add("A=M", "D=M", "@THAT", "M=D"); // THAT = *(frame - 1)
+        add("@R13", "M=M-1"); // R13 ist frame - 2
+        add("A=M", "D=M", "@THIS", "M=D"); // THIS = *(frame - 2)
+        add("@R13", "M=M-1"); // R13 ist frame - 3
+        add("A=M", "D=M", "@ARG", "M=D"); //  ARG = *(frame - 3)
+        add("@R13", "M=M-1"); // R13 ist frame - 4
+        add("A=M", "D=M", "@LCL", "M=D"); //  LCL = *(frame - 4)
+        add("@R13", "M=M-1"); // R13 ist frame - 5
+        add("A=M", "A=M;JMP"); // Sprung zur Rücksprungadresse = *(frame - 5)
     }
 
     private void generateIfGoto(IfGoto ifGoto)
