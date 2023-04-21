@@ -11,11 +11,6 @@ public record Push(int line,
                    String filename)
     implements Command
 {
-    public Push(int line, Segment segment, int value)
-    {
-        this(line, segment, value, null);
-    }
-
     public Push
     {
         if (value < 0)

@@ -1,5 +1,6 @@
 package ch.chassaing.hack.vm;
 
+import ch.chassaing.hack.vm.command.Command;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.*;
@@ -47,18 +48,18 @@ public class Main
             return;
         }
 
-        ByteCode byteCode = new PlainByteCode();
+        List<Command> commands = new LinkedList<>();
         CodeWriter codeWriter = new HackWriter(inFile.isDirectory());
 
         try (OutputStreamWriter writer = openForWriting(outPath)) {
             int iCount = 0;
             for (File vmFilePath : inPaths) {
-                Parser parser = new SlurpingParser(vmFilePath);
-                byteCode.startVmFile(vmFilePath.getName().replace(".vm", ""));
+                String filename = vmFilePath.getName().replace(".vm", "");
+                Parser parser = new SlurpingParser(filename, vmFilePath);
                 int line;
                 while ((line = parser.advance()) > 0) {
                     try {
-                        byteCode.add(parser.command());
+                        commands.add(parser.command());
                     } catch (Exception e) {
                         e.printStackTrace();
                         System.out.printf("%s - %d: %s%n", vmFilePath, line, e.getMessage());
@@ -66,7 +67,7 @@ public class Main
                     }
                 }
             }
-            Iterable<String> instructions = codeWriter.getInstructions(byteCode.commands());
+            Iterable<String> instructions = codeWriter.getInstructions(commands);
             for (String instruction : instructions) {
                 instruction = StringUtils.trim(instruction);
                 System.out.printf("%5d: %s\n", iCount++, instruction);

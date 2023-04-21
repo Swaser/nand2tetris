@@ -11,11 +11,6 @@ public record Pop(int line,
                   String filename)
     implements Command
 {
-    public Pop(int line, Segment segment, int value)
-    {
-        this(line, segment, value, null);
-    }
-
     public Pop
     {
         if (value < 0)
