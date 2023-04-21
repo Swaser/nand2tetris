@@ -5,4 +5,10 @@ public record Call(int line,
                    int nArgs)
     implements Command
 {
+    public Call
+    {
+        if (nArgs < 0) {
+            throw new IllegalArgumentException("nArgs must be >= 0");
+        }
+    }
 }

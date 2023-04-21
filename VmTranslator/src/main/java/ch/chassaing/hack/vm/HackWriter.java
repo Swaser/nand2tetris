@@ -13,7 +13,7 @@ public final class HackWriter
                    Segment.THIS, "@THIS",
                    Segment.THAT, "@THAT");
 
-    private String currentFunction = "global";
+    private String functionName = "global";
     private int retCounter = 0;
     private int compCounter = 0;
     private int contCounter = 0;
@@ -147,8 +147,8 @@ public final class HackWriter
      */
     private void generateCompare(String jumpInstruction)
     {
-        String contLabel = currentFunction + "$cont." + contCounter++;
-        String compLabel = currentFunction + "$comp." + compCounter++;
+        String contLabel = functionName + "$cont." + contCounter++;
+        String compLabel = functionName + "$comp." + compCounter++;
 
         stackToD();        // first = y -> D
         stackToM();        // second = x -> M
@@ -190,8 +190,13 @@ public final class HackWriter
 
     private void generateCall(Call call)
     {
+        if (call.nArgs() == 0) {
+            // add increase stack to make space for return value
+            add("@SP", "M=M+1");
+        }
+
         // current function
-        String returnLabel = currentFunction + "$ret." + retCounter++;
+        String returnLabel = functionName + "$ret." + retCounter++;
 
         // Rücksprungadresse auf den Stack
         add("@" + returnLabel,
@@ -210,11 +215,12 @@ public final class HackWriter
         add("@THAT", "D=M");
         toStack("D");
 
-        // ARG = SP - 5 - nArgs
+        // ARG = SP - 5 - nArgs; but we have to take into account, that
+        // we need space for the return value, even when nArgs == 0
+        // thus we must handle the code, as if nArgs >= 1
         add("@SP", "D=M", "@5", "D=D-A");
-        if (call.nArgs() > 0) {
-            add("@" + call.nArgs(), "D=D-A");
-        }
+        add("@" + Math.max(1, call.nArgs()), "D=D-A");
+
         add("@ARG", "M=D");
 
         // LCL = SP
@@ -348,7 +354,7 @@ public final class HackWriter
 
     private void enterFunction(String functionName)
     {
-        currentFunction = functionName;
+        this.functionName = functionName;
         retCounter = 0;
         compCounter = 0;
         contCounter = 0;
