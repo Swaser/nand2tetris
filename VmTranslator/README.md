@@ -14,8 +14,15 @@ dropping it from the stack.
 need a return statement, but that statement must not be reached. Therefore
 an endless loop must be inserted into the code just before the return.
 
+### Explanations
+About 3.: Return values are stored in *ARG. But what about functions
+that have zero arguments but still return a value? We could try to 
+handle all these different cases. Or we can handle them all the same.
+
 
 ## Planned Changes to the VM Specification
 
 1. Allow `push static <name>` and `pop static <name>`.
-2. Add instruction to drop a value from the stack `drop`.
+2. Add instruction to drop a value from the stack `drop`. This is more important
+than the dual operation of increasing the stack pointer without acutally pushing
+something to the stack.
