@@ -1,9 +1,6 @@
 package ch.chassaing.jack;
 
-import ch.chassaing.jack.token.Identifier;
-import ch.chassaing.jack.token.Keyword;
-import ch.chassaing.jack.token.KeywordType;
-import ch.chassaing.jack.token.Token;
+import ch.chassaing.jack.token.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -61,8 +58,9 @@ public class JackAnalyzer
                     while (peekChar() != null) {
                         current = requireNonNull(nextChar());
                         if (current == '*') {
-                            current = nextChar();
-                            if (current != null && current == '/') {
+                            next = peekChar();
+                            if (next != null && next == '/') {
+                                current = nextChar();
                                 break;
                             }
                         }
@@ -72,14 +70,73 @@ public class JackAnalyzer
             }
 
             if (isAlphabetic(current) || current == '_') {
-
                 return keywordOrIdentifier();
             }
+            else if (current == '"') {
+                return stringConstant();
+            }
+            else if (isDigit(current)) {
+                return integerConstant();
+            }
 
+            return symbol();
         }
 
         // no more characters and no token found so far
         return null;
+    }
+
+    @NotNull
+    private Token symbol()
+    {
+        requireNonNull(current);
+        for (SymbolType type : SymbolType.values()) {
+            if (current == type.repr) {
+                return new Symbol(lineNr, type);
+            }
+        }
+        throw new IllegalStateException("Unknown symbol " + current +
+                                        " on line " + lineNr);
+    }
+
+    /**
+     * Precondition: current is leftmost digit
+     * Post condition: current is rightmost digit
+     */
+    @NotNull
+    private Token integerConstant()
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append((char) requireNonNull(current));
+        Character next;
+        while ((next = peekChar()) != null) {
+            if (!isDigit(next)) {
+                break;
+            }
+            current = requireNonNull(nextChar());
+            sb.append((char) current);
+        }
+        return new IntegerConstant(lineNr, Integer.parseInt(sb.toString(), 10));
+    }
+
+    /**
+     * Precondition: current is the opening quote
+     * Post condition: current is the closing quote
+     */
+    @NotNull
+    private Token stringConstant()
+    {
+        StringBuilder sb = new StringBuilder();
+        Character next;
+        while ((next = peekChar()) != null) {
+            if (next == '"') {
+                current = nextChar();
+                break;
+            }
+            current = requireNonNull(nextChar());
+            sb.append((char) current);
+        }
+        return new StringConstant(lineNr, sb.toString());
     }
 
     /**
