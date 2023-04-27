@@ -11,7 +11,7 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <main.class>ch.chassaing.jack.JackCompiler</main.class>
+    <main.class>ch.chassaing.jack.Main</main.class>
   </properties>
 
   <build>

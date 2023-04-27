@@ -17,7 +17,8 @@ import static java.util.Objects.requireNonNull;
  * <br/>
  * Not Thread-safe.
  */
-public class JackAnalyzer
+public class JackTokenizer
+    implements Tokenizer
 {
     public static final LinkedList<Character> EMPTY_CHARACTERS = new LinkedList<>();
 
@@ -29,7 +30,7 @@ public class JackAnalyzer
     private Character current;
     private int lineNr = 0;
 
-    public JackAnalyzer(@NotNull Iterator<String> lineProvider)
+    public JackTokenizer(@NotNull Iterator<String> lineProvider)
     {
         this.lineProvider = lineProvider;
     }
