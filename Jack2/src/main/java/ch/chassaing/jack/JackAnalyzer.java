@@ -1,18 +1,18 @@
 package ch.chassaing.jack;
 
+import ch.chassaing.jack.token.Identifier;
+import ch.chassaing.jack.token.Keyword;
+import ch.chassaing.jack.token.KeywordType;
 import ch.chassaing.jack.token.Token;
-import io.vavr.collection.IndexedSeq;
-import io.vavr.collection.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.Objects;
 import java.util.Queue;
-import java.util.function.Predicate;
 
-import static java.lang.Character.isWhitespace;
+import static java.lang.Character.*;
+import static java.util.Objects.requireNonNull;
 
 
 /**
@@ -24,18 +24,21 @@ public class JackAnalyzer
 {
     public static final LinkedList<Character> EMPTY_CHARACTERS = new LinkedList<>();
 
+    @NotNull
     private final Iterator<String> lineProvider;
+    @NotNull
     private Queue<Character> characters = EMPTY_CHARACTERS;
-    private int lineNr = 0;
+    @Nullable
     private Character current;
+    private int lineNr = 0;
 
     public JackAnalyzer(@NotNull Iterator<String> lineProvider)
     {
         this.lineProvider = lineProvider;
     }
 
-    @NotNull
-    public IndexedSeq<Token> tokenize()
+    @Nullable
+    public Token advance()
     {
         while ((current = nextChar()) != null) {
 
@@ -51,13 +54,12 @@ public class JackAnalyzer
                     nextLine();
                     continue;
                 }
-
                 if (next != null && next == '*') {
                     // multi line comment
                     // ignore everything to the next */ or till the end of the file
                     current = nextChar(); // consume the '*'
                     while (peekChar() != null) {
-                         current = Objects.requireNonNull(nextChar());
+                        current = requireNonNull(nextChar());
                         if (current == '*') {
                             current = nextChar();
                             if (current != null && current == '/') {
@@ -69,18 +71,50 @@ public class JackAnalyzer
                 }
             }
 
+            if (isAlphabetic(current) || current == '_') {
 
+                return keywordOrIdentifier();
+            }
 
         }
 
-
-        return Vector.empty();
+        // no more characters and no token found so far
+        return null;
     }
 
+    /**
+     * Precondition: current contains the first character of the keyword or identifier
+     */
+    @NotNull
+    private Token keywordOrIdentifier()
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append((char) requireNonNull(current));
+        Character next;
+        while ((next = peekChar()) != null) {
+            if (!(isAlphabetic(next) || isDigit(next) || next == '_')) {
+                break;
+            }
+            current = requireNonNull(nextChar());
+            sb.append((char) current);
+        }
+
+        String value = sb.toString();
+        for (KeywordType type : KeywordType.values()) {
+            if (type.name().toLowerCase().equals(value)) {
+                return new Keyword(lineNr, type);
+            }
+        }
+
+        return new Identifier(lineNr, value);
+    }
+
+    /**
+     * Returns and consumes the next character, if there is any or null otherwise.
+     */
     @Nullable
     private Character nextChar()
     {
-
         if (characters.isEmpty()) {
             nextLine();
         }
@@ -88,7 +122,8 @@ public class JackAnalyzer
     }
 
     /**
-     * Return the next character, if there is any or null otherwise.
+     * Return the value of the next character, if there is any or null otherwise.
+     * The character is not consumed.
      */
     @Nullable
     private Character peekChar()

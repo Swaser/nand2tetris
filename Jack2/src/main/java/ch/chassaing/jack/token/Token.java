@@ -1,15 +1,11 @@
 package ch.chassaing.jack.token;
 
-import org.jetbrains.annotations.NotNull;
-
 public abstract class Token
 {
-    @NotNull public final String file;
-    public final int line;
+    public final int lineNr;
 
-    protected Token(@NotNull String file, int line)
+    protected Token(int lineNr)
     {
-        this.file = file;
-        this.line = line;
+        this.lineNr = lineNr;
     }
 }

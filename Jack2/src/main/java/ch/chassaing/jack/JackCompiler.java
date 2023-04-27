@@ -14,8 +14,10 @@ public class JackCompiler
     {
         try (BufferedReader reader = Files.newBufferedReader(Path.of(args[0]))) {
             JackAnalyzer analyzer = new JackAnalyzer(reader.lines().iterator());
-            IndexedSeq<Token> tokens = analyzer.tokenize();
-            tokens.forEach(System.out::println);
+            Token token;
+            while ((token = analyzer.advance()) != null) {
+                System.out.println(token);
+            }
         }
         catch (IOException e) {
             throw new RuntimeException(e);
