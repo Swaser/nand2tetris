@@ -20,7 +20,7 @@ import static java.util.Objects.requireNonNull;
 public class JackTokenizer
     implements Tokenizer
 {
-    public static final LinkedList<Character> EMPTY_CHARACTERS = new LinkedList<>();
+    private static final LinkedList<Character> EMPTY_CHARACTERS = new LinkedList<>();
 
     @NotNull
     private final Iterator<String> lineProvider;
@@ -30,13 +30,46 @@ public class JackTokenizer
     private Character current;
     private int lineNr = 0;
 
+    private int currentTokenLineNumber;
+    private Token nextToken;
+
     public JackTokenizer(@NotNull Iterator<String> lineProvider)
     {
         this.lineProvider = lineProvider;
     }
 
+    @Override
+    public @Nullable Token advance()
+    {
+        Token result;
+        if (nextToken != null) {
+            result = nextToken;
+            nextToken = null;
+        } else {
+            result = doAdvance();
+        }
+        currentTokenLineNumber = lineNr;
+        System.out.println("Handling " + result);
+        return result;
+    }
+
+    @Override
+    public @Nullable Token peek()
+    {
+        if (nextToken == null) {
+            nextToken = doAdvance();
+        }
+        return nextToken;
+    }
+
+    @Override
+    public int lineNumber()
+    {
+        return currentTokenLineNumber;
+    }
+
     @Nullable
-    public Token advance()
+    private Token doAdvance()
     {
         while ((current = nextChar()) != null) {
 
@@ -93,7 +126,7 @@ public class JackTokenizer
         requireNonNull(current);
         for (SymbolType type : SymbolType.values()) {
             if (current == type.repr) {
-                return new Symbol(lineNr, type);
+                return new Symbol(type);
             }
         }
         throw new IllegalStateException("Unknown symbol " + current +
@@ -117,7 +150,7 @@ public class JackTokenizer
             current = requireNonNull(nextChar());
             sb.append((char) current);
         }
-        return new IntegerConstant(lineNr, Integer.parseInt(sb.toString(), 10));
+        return new IntegerConstant(Integer.parseInt(sb.toString(), 10));
     }
 
     /**
@@ -137,7 +170,7 @@ public class JackTokenizer
             current = requireNonNull(nextChar());
             sb.append((char) current);
         }
-        return new StringConstant(lineNr, sb.toString());
+        return new StringConstant(sb.toString());
     }
 
     /**
@@ -160,11 +193,11 @@ public class JackTokenizer
         String value = sb.toString();
         for (KeywordType type : KeywordType.values()) {
             if (type.name().toLowerCase().equals(value)) {
-                return new Keyword(lineNr, type);
+                return new Keyword(type);
             }
         }
 
-        return new Identifier(lineNr, value);
+        return new Identifier(value);
     }
 
     /**

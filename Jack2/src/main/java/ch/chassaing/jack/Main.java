@@ -1,7 +1,5 @@
 package ch.chassaing.jack;
 
-import ch.chassaing.jack.token.Token;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -13,9 +11,9 @@ public class Main
     {
         try (BufferedReader reader = Files.newBufferedReader(Path.of(args[0]))) {
             JackTokenizer analyzer = new JackTokenizer(reader.lines().iterator());
-            Token token;
-            while ((token = analyzer.advance()) != null) {
-                System.out.println(token);
+            CompilationEngine compilationEngine = new CompilationEngine(analyzer);
+            while (compilationEngine.compileClass()) {
+                ; // stuff is done in .compileClass()
             }
         }
         catch (IOException e) {

@@ -1,11 +1,6 @@
 package ch.chassaing.jack.token;
 
-public abstract class Token
+public sealed interface Token
+        permits Identifier, IntegerConstant, Keyword, StringConstant, Symbol
 {
-    public final int lineNr;
-
-    protected Token(int lineNr)
-    {
-        this.lineNr = lineNr;
-    }
 }
