@@ -19,6 +19,7 @@ public final class CompilationEngine
 
     private String className;
     private String subroutineName;
+    private SubroutineType subroutineType;
     private Map<String, VarType> staticVars;
     private Map<String, VarType> fields;
     private Map<String, VarType> parameters;
@@ -161,8 +162,8 @@ public final class CompilationEngine
 
     private void compileSubroutineDec()
     {
+        precondition(subroutineType == null);
         Token token = tokenizer.advance();
-        SubroutineType subroutineType = null;
         if (Keyword.CONSTRUCTOR.equals(token)) {
             subroutineType = SubroutineType.CONSTRUCTOR;
         } else if (Keyword.FUNCTION.equals(token)) {
@@ -200,6 +201,7 @@ public final class CompilationEngine
         parameters = null;
         localVars = null;
         subroutineName = null;
+        subroutineType = null;
     }
 
     @NotNull
@@ -338,6 +340,33 @@ public final class CompilationEngine
     private void compileLet(Token token)
     {
         precondition(Keyword.LET.equals(token));
+        token = tokenizer.advance();
+        if (!(token instanceof Identifier varIdentifier)) {
+            throw reportError("Expecting variable name", token);
+        }
+        String varName = varIdentifier.value();
+        token = tokenizer.advance();
+        boolean hasArrayIndex = false;
+        if (Symbol.LEFT_BRACKET.equals(token)) {
+            hasArrayIndex = true;
+            // [expression]
+            compileExpression();
+            token = tokenizer.advance();
+            if (!Symbol.RIGHT_BRACKET.equals(token)) {
+                throw reportError("Expecting ']'", token);
+            }
+        }
+        if (!Symbol.EQUAL.equals(token)) {
+            throw reportError("Expecting '='", token);
+        }
+        compileExpression();
+
+        token = tokenizer.advance();
+        if (!Symbol.SEMICOLON.equals(token)) {
+            throw reportError("Expecting ';'", token);
+        }
+
+        // TODO now assign to variable
     }
 
     private void compileIf(Token token)
@@ -358,6 +387,11 @@ public final class CompilationEngine
     private void compileReturn(Token token)
     {
         precondition(Keyword.RETURN.equals(token));
+    }
+
+    private void compileExpression()
+    {
+
     }
 
     private void report(@NotNull String message, Object... params)
