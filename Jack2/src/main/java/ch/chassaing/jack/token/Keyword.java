@@ -14,8 +14,18 @@ public record Keyword(@NotNull KeywordType type)
     public static final Keyword FUNCTION = new Keyword(KeywordType.FUNCTION);
     public static final Keyword METHOD = new Keyword(KeywordType.METHOD);
 
+    public static final Keyword VAR = new Keyword(KeywordType.VAR);
+
     public static final Keyword VOID = new Keyword(KeywordType.VOID);
     public static final Keyword INT = new Keyword(KeywordType.INT);
     public static final Keyword CHAR = new Keyword(KeywordType.CHAR);
     public static final Keyword BOOLEAN = new Keyword(KeywordType.BOOLEAN);
+
+    public static final Keyword LET = new Keyword(KeywordType.LET);
+    public static final Keyword IF = new Keyword(KeywordType.IF);
+    public static final Keyword WHILE = new Keyword(KeywordType.WHILE);
+    public static final Keyword DO = new Keyword(KeywordType.DO);
+    public static final Keyword RETURN = new Keyword(KeywordType.RETURN);
+
+
 }
