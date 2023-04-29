@@ -345,26 +345,18 @@ public final class CompilationEngine
             throw reportError("Expecting variable name", token);
         }
         String varName = varIdentifier.value();
-        token = tokenizer.advance();
-        boolean hasArrayIndex = false;
-        if (Symbol.LEFT_BRACKET.equals(token)) {
-            hasArrayIndex = true;
-            // [expression]
-            compileExpression();
-            token = tokenizer.advance();
-            if (!Symbol.RIGHT_BRACKET.equals(token)) {
-                throw reportError("Expecting ']'", token);
-            }
-        }
-        if (!Symbol.EQUAL.equals(token)) {
-            throw reportError("Expecting '='", token);
-        }
-        compileExpression();
 
-        token = tokenizer.advance();
-        if (!Symbol.SEMICOLON.equals(token)) {
-            throw reportError("Expecting ';'", token);
+        // handle the [expression] array index
+        boolean hasArrayIndex = Symbol.LEFT_BRACKET.equals(tokenizer.peek());
+        if (hasArrayIndex) {
+            consumeSymbol(Symbol.LEFT_BRACKET);
+            compileExpression();
+            consumeSymbol(Symbol.RIGHT_BRACKET);
         }
+
+        consumeSymbol(Symbol.EQUAL);
+        compileExpression();
+        consumeSymbol(Symbol.SEMICOLON);
 
         // TODO now assign to variable
     }
@@ -372,6 +364,13 @@ public final class CompilationEngine
     private void compileIf(Token token)
     {
         precondition(Keyword.IF.equals(token));
+        token = tokenizer.advance();
+        if (!Symbol.LEFT_BRACE.equals(token)) {
+            throw reportError("Expecting '('", token);
+        }
+        // ...
+        compileExpression();
+
     }
 
     private void compileWhile(Token token)
@@ -392,6 +391,16 @@ public final class CompilationEngine
     private void compileExpression()
     {
 
+    }
+
+    @NotNull
+    private Token consumeSymbol(@NotNull Symbol symbol)
+    {
+        Token token = tokenizer.advance();
+        if (!symbol.equals(token)) {
+            throw reportError("Expecting " + symbol.type().repr, token);
+        }
+        return token;
     }
 
     private void report(@NotNull String message, Object... params)
