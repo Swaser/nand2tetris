@@ -124,9 +124,9 @@ public class JackTokenizer
     private Token symbol()
     {
         requireNonNull(current);
-        for (SymbolType type : SymbolType.values()) {
+        for (Symbol type : Symbol.values()) {
             if (current == type.repr) {
-                return new Symbol(type);
+                return type;
             }
         }
         throw new IllegalStateException("Unknown symbol " + current +
@@ -191,9 +191,9 @@ public class JackTokenizer
         }
 
         String value = sb.toString();
-        for (KeywordType type : KeywordType.values()) {
-            if (type.name().toLowerCase().equals(value)) {
-                return new Keyword(type);
+        for (Keyword keyword : Keyword.values()) {
+            if (keyword.name().toLowerCase().equals(value)) {
+                return keyword;
             }
         }
 

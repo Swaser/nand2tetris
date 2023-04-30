@@ -3,7 +3,6 @@ package ch.chassaing.jack.parse;
 import ch.chassaing.jack.token.Identifier;
 import ch.chassaing.jack.token.Keyword;
 import ch.chassaing.jack.token.Token;
-import io.vavr.control.Option;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -11,24 +10,16 @@ import java.util.Objects;
 
 public sealed interface VarType
 {
-    enum PrimitiveType
-    {
-        INT, CHAR, BOOLEAN
-    }
-
-    VarType INT = new Primitive(PrimitiveType.INT);
-    VarType CHAR = new Primitive(PrimitiveType.CHAR);
-    VarType BOOLEAN = new Primitive(PrimitiveType.BOOLEAN);
 
     @Nullable
     static VarType fromToken(@Nullable Token token)
     {
         if (Keyword.INT.equals(token)) {
-            return INT;
+            return PrimitiveType.INT;
         } else if (Keyword.CHAR.equals(token)) {
-            return CHAR;
+            return PrimitiveType.CHAR;
         } else if (Keyword.BOOLEAN.equals(token)) {
-            return BOOLEAN;
+            return PrimitiveType.BOOLEAN;
         } else if (token instanceof Identifier identifier) {
             return new UserType(identifier.value());
         }
@@ -57,7 +48,6 @@ public sealed interface VarType
     record UserType(@NotNull String name)
             implements VarType
     {
-
         @Override
         public boolean equals(Object o)
         {

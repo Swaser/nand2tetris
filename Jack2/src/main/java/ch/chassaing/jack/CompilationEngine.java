@@ -11,15 +11,18 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 
 import static ch.chassaing.jack.Contracts.precondition;
-import static ch.chassaing.jack.token.KeywordType.*;
+import static ch.chassaing.jack.token.Keyword.*;
+import static ch.chassaing.jack.token.Symbol.*;
+import static java.util.Objects.requireNonNull;
 
 public final class CompilationEngine
 {
     private final Tokenizer tokenizer;
 
+    private Token currentToken;
     private String className;
     private String subroutineName;
-    private SubroutineType subroutineType;
+    private Keyword subroutineType;
     private Map<String, VarType> staticVars;
     private Map<String, VarType> fields;
     private Map<String, VarType> parameters;
@@ -37,165 +40,121 @@ public final class CompilationEngine
      * Since all code must be in classes, we consume the first token
      * and fail the parsing if it ain't a class.
      */
-    public boolean compileClass()
+    public void compileClass()
     {
-        Token token = tokenizer.advance();
-        if (token == null) {
-            // no more classes
-            return false;
+        precondition(CLASS.equals(currentToken));
+
+        advance();
+        if (!(currentToken instanceof Identifier classIdentifier)) {
+            throw reportError("Expected token 'identifier'");
         }
-
-        if (!Keyword.CLAZZ.equals(token)) {
-            throw reportError("Expected token 'class'", token);
-        }
-
-
-        token = tokenizer.advance();
-        if (!(token instanceof Identifier classIdentifier)) {
-            throw reportError("Expected token 'identifier'", token);
-        }
-
         className = classIdentifier.value();
-        token = tokenizer.advance();
-        if (!Symbol.LEFT_BRACE.equals(token)) {
-            throw reportError("Expected opening brace '{'", token);
-        }
-
         staticVars = new LinkedHashMap<>();
         fields = new LinkedHashMap<>();
-        report("class " + className);
+        report("class %s%n", className);
 
-        while ((token = tokenizer.peek()) != null) {
+        consumeSymbol(LEFT_BRACE);
 
-            if (token instanceof Keyword keyword) {
+        while (true) {
 
-                if (EnumSet.of(STATIC, FIELD).contains(keyword.type())) {
-                    Set<ClassVarDec> newClassVariables = compileClassVarDec();
-                    for (ClassVarDec classVar : newClassVariables) {
-                        if (staticVars.containsKey(classVar.name()) ||
-                            fields.containsKey(classVar.name())) {
+            advance();
+            if (STATIC.equals(currentToken) || FIELD.equals(currentToken)) {
 
-                            throw reportError("Duplicate class variable declaration " + classVar, null);
-                        }
-                        if (classVar.qualifier() == Qualifier.STATIC) {
-                            staticVars.put(classVar.name(), classVar.varDec().type());
-                        } else {
-                            fields.put(classVar.name(), classVar.varDec().type());
-                        }
+                for (VarDec varDec : compileClassVarDec()) {
+                    String varName = varDec.name();
+                    if (staticVars.containsKey(varName) ||
+                        fields.containsKey(varName)) {
+
+                        throw reportError("Duplicate class variable declaration " + varDec);
                     }
-
-                    continue;
+                    if (STATIC.equals(currentToken)) {
+                        staticVars.put(varName, varDec.type());
+                    } else {
+                        fields.put(varName, varDec.type());
+                    }
                 }
+            } else if (CONSTRUCTOR.equals(currentToken) ||
+                       FUNCTION.equals(currentToken) ||
+                       METHOD.equals(currentToken)) {
 
-                if (EnumSet.of(CONSTRUCTOR, FUNCTION, METHOD).contains(keyword.type())) {
-                    compileSubroutineDec();
-                    continue;
-                }
-            }
+                compileSubroutineDec();
 
-            token = tokenizer.advance(); // take next
-            if (Symbol.RIGHT_BRACE.equals(token)) {
+            } else if (RIGHT_BRACE.equals(currentToken)) {
                 break;
+            } else {
+                throw reportError("Unexpected token");
             }
-
-            throw reportError("Unexpected token", token);
         }
 
-        // if everything went right, then token contains a right brace
-        if (!Symbol.RIGHT_BRACE.equals(token)) {
-            throw reportError("Expected closing brace '}'", token);
-        }
-
+        // class is now ended
         className = null;
         staticVars = null;
         fields = null;
-        return true;
     }
 
     @NotNull
-    private Set<ClassVarDec> compileClassVarDec()
+    private Set<VarDec> compileClassVarDec()
     {
-        Token token = tokenizer.advance();
-        Qualifier qualifier;
-        if (Keyword.STATIC.equals(token)) {
-            qualifier = Qualifier.STATIC;
-        } else if (Keyword.FIELD.equals(token)) {
-            qualifier = Qualifier.FIELD;
-        } else {
-            throw reportError("ClassVarDec must start with keyword 'static' or 'field'", token);
-        }
+        precondition(STATIC.equals(currentToken) || FIELD.equals(currentToken));
+        Token qualifier = currentToken;
 
-        token = tokenizer.advance();
-        VarType varType = VarType.fromToken(token);
-        if (varType == null) {
-            throw reportError("Expecting primitive type or user type", token);
-        }
+        advance();
+        VarType varType = requireNonNull(determineVarType(false));
 
-        Set<ClassVarDec> classVariables = new LinkedHashSet<>();
+        Set<VarDec> classVariables = new LinkedHashSet<>();
         while (true) {
-            token = tokenizer.advance();
-            if (token instanceof Identifier varIdentifier) {
-                ClassVarDec classVarDec =
-                        new ClassVarDec(qualifier, new VarDec(varType, varIdentifier.value()));
-                if (classVariables.contains(classVarDec)) {
-                    throw reportError("Duplicate variable declaration: " + classVarDec, token);
+            advance();
+            if (currentToken instanceof Identifier varIdentifier) {
+                VarDec varDec = new VarDec(varType, varIdentifier.value());
+                if (classVariables.contains(varDec)) {
+                    throw reportError("Duplicate variable declaration: " + varDec);
                 }
-                classVariables.add(classVarDec);
-                continue;
-            }
-
-            if (Symbol.COMMA.equals(token)) {
-                continue;
-            }
-
-            if (Symbol.SEMICOLON.equals(token)) {
+                classVariables.add(varDec);
+            } else if (Symbol.SEMICOLON.equals(currentToken)) {
                 break;
+            } else if (!Symbol.COMMA.equals(currentToken)) {
+                throw reportError("Unexpected token");
             }
-
-            throw reportError("Unexpected token", token);
         }
 
-        report("ClassVarDec %s %s %s%n", qualifier, varType, classVariables);
+        report("class variables %s %s %s%n", qualifier, varType, classVariables);
 
         return classVariables;
+    }
+
+    @Nullable
+    private VarType determineVarType(boolean canBeVoid)
+    {
+        VarType varType = VarType.fromToken(currentToken);
+        if (varType == null) {
+            if (!canBeVoid || !VOID.equals(currentToken)) {
+                throw reportError("Expecting primitive type or user type");
+            }
+        }
+        return varType;
     }
 
     private void compileSubroutineDec()
     {
         precondition(subroutineType == null);
-        Token token = tokenizer.advance();
-        if (Keyword.CONSTRUCTOR.equals(token)) {
-            subroutineType = SubroutineType.CONSTRUCTOR;
-        } else if (Keyword.FUNCTION.equals(token)) {
-            subroutineType = SubroutineType.FUNCTION;
-        } else if (Keyword.METHOD.equals(token)) {
-            subroutineType = SubroutineType.METHOD;
-        }
-        if (subroutineType == null) {
-            throw reportError("Expected 'constructor', or 'field', or 'method'", token);
-        }
+        precondition(CONSTRUCTOR.equals(currentToken) ||
+                     FUNCTION.equals(currentToken) ||
+                     METHOD.equals(currentToken));
+        subroutineType = (Keyword) currentToken;
 
-        token = tokenizer.advance();
-        VarType returnType = VarType.fromToken(token);
-        // When no type found, it must be void instead
-        if (returnType == null && !Keyword.VOID.equals(token)) {
-            throw reportError("Expecting subroutine return type", token);
-        }
+        advance();
+        VarType returnType = determineVarType(true);
 
-        token = tokenizer.advance();
-        if (!(token instanceof Identifier nameIdentifier)) {
-            throw reportError("Expecting subroutine name", token);
+        advance();
+        if (!(currentToken instanceof Identifier nameIdentifier)) {
+            throw reportError("Expecting subroutine name");
         }
         subroutineName = nameIdentifier.value();
         report("Subroutine %s %s %s".formatted(subroutineType,
                                                returnType == null ? "void" : returnType.toString(),
                                                subroutineName));
 
-        parameters = new LinkedHashMap<>();
-        for (VarDec varDec : compileParameterList()) {
-            parameters.put(varDec.name(), varDec.type());
-        }
-
+        compileParameterList();
         compileSubroutineBody();
 
         parameters = null;
@@ -204,153 +163,122 @@ public final class CompilationEngine
         subroutineType = null;
     }
 
-    @NotNull
-    private Set<VarDec> compileParameterList()
+    private void compileParameterList()
     {
-        Token token = tokenizer.advance();
-        if (!Symbol.LEFT_PAREN.equals(token)) {
-            throw reportError("Expecting '(' after subroutine name", token);
+        precondition(parameters == null);
+        advance();
+        if (!Symbol.LEFT_PAREN.equals(currentToken)) {
+            throw reportError("Expecting '(' after subroutine name");
         }
-        Set<VarDec> vars = new LinkedHashSet<>();
+        parameters = new LinkedHashMap<>();
         while (true) {
-            token = tokenizer.advance();
-            if (Symbol.COMMA.equals(token)) {
-                if (vars.isEmpty()) {
-                    throw reportError("Unexpected comma", token);
+            advance();
+            if (Symbol.COMMA.equals(currentToken)) {
+                if (parameters.isEmpty()) {
+                    throw reportError("Unexpected comma");
                 }
-                continue;
-            }
-            if (Symbol.RIGHT_PAREN.equals(token)) {
+            } else if (Symbol.RIGHT_PAREN.equals(currentToken)) {
                 break;
+            } else {
+                VarType type = determineVarType(false);
+                advance();
+                if (!(currentToken instanceof Identifier identifier)) {
+                    throw reportError("Expecting parameter name");
+                }
+                String name = identifier.value();
+                if (parameters.containsKey(name)) {
+                    throw reportError("Duplicate parameter " + name);
+                }
+                report("parameter %s %s%n", type, name);
+                parameters.put(name, type);
             }
-            VarType type = VarType.fromToken(token);
-            if (type == null) {
-                throw reportError("Expecting parameter type", token);
-            }
-            token = tokenizer.advance();
-            if (!(token instanceof Identifier identifier)) {
-                throw reportError("Expecting parameter name", token);
-            }
-            VarDec varDec = new VarDec(type, identifier.value());
-            if (vars.contains(varDec)) {
-                throw reportError("Duplicate parameter declaration " + varDec, token);
-            }
-            vars.add(varDec);
         }
-
-        System.out.printf("ParameterList %s%n", vars);
-        return vars;
     }
 
     private void compileSubroutineBody()
     {
         precondition(localVars == null);
 
-        Token token = tokenizer.advance();
-        if (!Symbol.LEFT_BRACE.equals(token)) {
-            throw reportError("Expecting opening brace", token);
-        }
+        consumeSymbol(LEFT_BRACE);
 
         localVars = new LinkedHashMap<>();
         while (true) {
-            token = tokenizer.advance();
-            if (Symbol.RIGHT_BRACE.equals(token)) {
+            advance();
+            if (VAR.equals(currentToken)) {
+                compileVarDec();
+            } else if (RIGHT_BRACE.equals(currentToken)) {
                 break;
+            } else {
+                compileStatement();
             }
-
-            if (Keyword.VAR.equals(token)) {
-                for (VarDec varDec : compileVarDec(token)) {
-                    if (localVars.containsKey(varDec.name())) {
-                        throw reportError("Duplicate local variable " + varDec, null);
-                    }
-                    localVars.put(varDec.name(), varDec.type());
-
-                }
-                continue;
-            }
-
-            compileStatement(token);
         }
 
         localVars = null;
     }
 
-    @NotNull
-    private Set<VarDec> compileVarDec(Token token)
+    private void compileVarDec()
     {
-        precondition(Keyword.VAR.equals(token));
+        precondition(localVars != null);
+        precondition(VAR.equals(currentToken));
 
-        token = tokenizer.advance();
-        VarType varType = VarType.fromToken(token);
-        if (varType == null) {
-            throw reportError("Expecting variable type", token);
-        }
+        advance();
+        VarType varType = determineVarType(false);
 
-        Set<VarDec> vars = new LinkedHashSet<>();
+        boolean varFound = false;
         while (true) {
-            token = tokenizer.advance();
-            if (Symbol.SEMICOLON.equals(token)) {
-                if (vars.isEmpty()) {
-                    throw reportError("Expecting at least one variable declaration", token);
-                }
+            advance();
+            if (SEMICOLON.equals(currentToken)) {
+                if (!varFound) throw reportError("Expecting variable identifier before semicolon");
                 break;
-            }
-
-            if (Symbol.COMMA.equals(token)) {
-                if (vars.isEmpty()) {
-                    throw reportError("Expecting at least one variable declaration", token);
+            } else if (COMMA.equals(currentToken)) {
+                if (!varFound) throw reportError("Expecting variable identifier before comma");
+                varFound = false;
+            } else if (currentToken instanceof Identifier identifier) {
+                String name = identifier.value();
+                if (localVars.containsKey(name)) {
+                    throw reportError("Duplicate local variable " + name);
                 }
-                continue;
+                report("local variable %s %s%n", varType, name);
+                localVars.put(name, varType);
+                varFound = true;
+            } else {
+                throw reportError("Unexpected token");
             }
-
-            if (!(token instanceof Identifier identifier)) {
-                throw reportError("Expecting variable name", token);
-            }
-
-            VarDec varDec = new VarDec(varType, identifier.value());
-            if (vars.contains(varDec)) {
-                throw reportError("Double local variable " + varDec, null);
-            }
-            vars.add(varDec);
-        }
-
-        report("VarDec %s %s%n", varType, vars);
-
-        return vars;
-    }
-
-    private void compileStatement(Token token)
-    {
-
-        if (Keyword.LET.equals(token)) {
-            compileLet(token);
-        } else if (Keyword.IF.equals(token)) {
-            compileIf(token);
-        } else if (Keyword.WHILE.equals(token)) {
-            compileWhile(token);
-        } else if (Keyword.DO.equals(token)) {
-            compileDo(token);
-        } else if (Keyword.RETURN.equals(token)) {
-            compileReturn(token);
-        } else {
-            throw reportError("Unexpected token", token);
         }
     }
 
-    private void compileLet(Token token)
+    private void compileStatement()
     {
-        precondition(Keyword.LET.equals(token));
-        token = tokenizer.advance();
-        if (!(token instanceof Identifier varIdentifier)) {
-            throw reportError("Expecting variable name", token);
+        precondition(currentToken instanceof Keyword);
+        switch ((Keyword) currentToken) {
+
+            case LET -> compileLet();
+            case DO -> compileDo();
+            case IF -> compileIf();
+            case WHILE -> compileWhile();
+            case RETURN -> compileReturn();
+            default -> throw reportError("Unexpected keyword");
         }
-        String varName = varIdentifier.value();
+    }
+
+    private void compileLet()
+    {
+        precondition(Keyword.LET.equals(currentToken));
+
+        advance();
+        if (!(currentToken instanceof Identifier varIdentifier)) {
+            throw reportError("Expecting variable name");
+        }
+        String name = varIdentifier.value();
 
         // handle the [expression] array index
-        boolean hasArrayIndex = Symbol.LEFT_BRACKET.equals(tokenizer.peek());
+        boolean hasArrayIndex = LEFT_BRACKET.equals(tokenizer.peek());
         if (hasArrayIndex) {
             consumeSymbol(Symbol.LEFT_BRACKET);
-            compileExpression();
+            VarType idxType = compileExpression();
+            if (!PrimitiveType.INT.equals(idxType)) {
+                throw reportError("index of array must be integer type");
+            }
             consumeSymbol(Symbol.RIGHT_BRACKET);
         }
 
@@ -361,46 +289,72 @@ public final class CompilationEngine
         // TODO now assign to variable
     }
 
-    private void compileIf(Token token)
+    private void compileIf()
     {
-        precondition(Keyword.IF.equals(token));
-        token = tokenizer.advance();
-        if (!Symbol.LEFT_BRACE.equals(token)) {
-            throw reportError("Expecting '('", token);
+        precondition(IF.equals(currentToken));
+
+        consumeSymbol(Symbol.LEFT_PAREN);
+        VarType conditionType = compileExpression();
+        if (!PrimitiveType.BOOLEAN.equals(conditionType)) {
+            throw reportError("If condition must be of type boolean");
         }
-        // ...
-        compileExpression();
+        consumeSymbol(Symbol.RIGHT_PAREN);
 
+        // TODO jump to after if part if not true
+        if (LEFT_BRACE.equals(tokenizer.peek())) compileBlock();
+        else compileStatement();
+        // TODO jump label
+        if (ELSE.equals(tokenizer.peek())) {
+            advance(); // consume 'else'
+            if (LEFT_BRACE.equals(tokenizer.peek())) compileBlock();
+            else compileStatement();
+        }
     }
 
-    private void compileWhile(Token token)
+    private void compileWhile()
     {
-        precondition(Keyword.WHILE.equals(token));
+        precondition(Keyword.WHILE.equals(currentToken));
     }
 
-    private void compileDo(Token token)
+    private void compileDo()
     {
-        precondition(Keyword.DO.equals(token));
+        precondition(Keyword.DO.equals(currentToken));
     }
 
-    private void compileReturn(Token token)
+    private void compileReturn()
     {
-        precondition(Keyword.RETURN.equals(token));
+        precondition(Keyword.RETURN.equals(currentToken));
     }
 
-    private void compileExpression()
+    private void compileBlock()
     {
-
+        consumeSymbol(LEFT_BRACE);
+        while (true) {
+            advance();
+            if (Symbol.RIGHT_BRACE.equals(advance())) {
+                break;
+            }
+            compileStatement();
+        }
     }
 
     @NotNull
-    private Token consumeSymbol(@NotNull Symbol symbol)
+    private VarType compileExpression()
     {
-        Token token = tokenizer.advance();
-        if (!symbol.equals(token)) {
-            throw reportError("Expecting " + symbol.type().repr, token);
+        return null;
+    }
+
+    private void consumeSymbol(@NotNull Symbol symbol)
+    {
+        if (!symbol.equals(advance())) {
+            throw reportError("Expecting " + symbol.repr);
         }
-        return token;
+    }
+
+    private Token advance()
+    {
+        currentToken = tokenizer.advance();
+        return currentToken;
     }
 
     private void report(@NotNull String message, Object... params)
@@ -408,9 +362,9 @@ public final class CompilationEngine
         System.out.printf(message, params);
     }
 
-    private RuntimeException reportError(@NotNull String message,
-                                         @Nullable Token token)
+    private RuntimeException reportError(@NotNull String message)
     {
-        return new IllegalArgumentException("%d - %s: %s".formatted(tokenizer.lineNumber(), message, token));
+        return new IllegalArgumentException(
+                "%d - %s: %s".formatted(tokenizer.lineNumber(), message, currentToken));
     }
 }
