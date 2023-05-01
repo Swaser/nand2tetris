@@ -43,46 +43,35 @@ public final class CompilationEngine
     public void compileClass()
     {
         precondition(CLASS.equals(currentToken));
+        precondition(staticVars == null);
+        precondition(fields == null);
 
         advance();
-        if (!(currentToken instanceof Identifier classIdentifier)) {
-            throw reportError("Expected token 'identifier'");
-        }
-        className = classIdentifier.value();
+        className = consumeIdentifier();
+        report("class %s%n", className);
+
         staticVars = new LinkedHashMap<>();
         fields = new LinkedHashMap<>();
-        report("class %s%n", className);
 
         consumeSymbol(LEFT_BRACE);
 
         while (true) {
 
             advance();
-            if (STATIC.equals(currentToken) || FIELD.equals(currentToken)) {
-
-                for (VarDec varDec : compileClassVarDec()) {
-                    String varName = varDec.name();
-                    if (staticVars.containsKey(varName) ||
-                        fields.containsKey(varName)) {
-
-                        throw reportError("Duplicate class variable declaration " + varDec);
-                    }
-                    if (STATIC.equals(currentToken)) {
-                        staticVars.put(varName, varDec.type());
-                    } else {
-                        fields.put(varName, varDec.type());
-                    }
-                }
-            } else if (CONSTRUCTOR.equals(currentToken) ||
-                       FUNCTION.equals(currentToken) ||
-                       METHOD.equals(currentToken)) {
-
-                compileSubroutineDec();
-
-            } else if (RIGHT_BRACE.equals(currentToken)) {
+            if (RIGHT_BRACE.equals(currentToken)) {
                 break;
+            } else if (STATIC.equals(currentToken)) {
+                for (VarDec varDec : compileClassVarDec()) {
+                    checkClassVarNotExists(varDec.name());
+                    staticVars.put(varDec.name(), varDec.type());
+                }
+            } else if (FIELD.equals(currentToken)) {
+                for (VarDec varDec : compileClassVarDec()) {
+                    checkClassVarNotExists(varDec.name());
+                    fields.put(varDec.name(), varDec.type());
+                }
             } else {
-                throw reportError("Unexpected token");
+                compileSubroutineDec();
             }
         }
 
@@ -92,6 +81,13 @@ public final class CompilationEngine
         fields = null;
     }
 
+    private void checkClassVarNotExists(@NotNull String varName)
+    {
+        if (staticVars.containsKey(varName) || fields.containsKey(varName)) {
+            throw reportError("Duplicate class variable declaration " + varName);
+        }
+    }
+
     @NotNull
     private Set<VarDec> compileClassVarDec()
     {
@@ -99,25 +95,26 @@ public final class CompilationEngine
         Token qualifier = currentToken;
 
         advance();
-        VarType varType = requireNonNull(determineVarType(false));
+        VarType type = requireNonNull(determineVarType(false));
 
         Set<VarDec> classVariables = new LinkedHashSet<>();
+        boolean hasVar = false;
         while (true) {
             advance();
-            if (currentToken instanceof Identifier varIdentifier) {
-                VarDec varDec = new VarDec(varType, varIdentifier.value());
-                if (classVariables.contains(varDec)) {
-                    throw reportError("Duplicate variable declaration: " + varDec);
-                }
-                classVariables.add(varDec);
-            } else if (Symbol.SEMICOLON.equals(currentToken)) {
+            if (Symbol.SEMICOLON.equals(currentToken)) {
+                if (!hasVar) throw reportError("Expecting variable identifier");
                 break;
-            } else if (!Symbol.COMMA.equals(currentToken)) {
-                throw reportError("Unexpected token");
+            } else if (Symbol.COMMA.equals(currentToken)) {
+                if (!hasVar) throw reportError("Expecting variable identifier");
+                hasVar = false;
+            } else {
+                String name = consumeIdentifier();
+                classVariables.add(new VarDec(type, name));
+                hasVar = true;
             }
         }
 
-        report("class variables %s %s %s%n", qualifier, varType, classVariables);
+        report("class variables %s %s %s%n", qualifier, type, classVariables);
 
         return classVariables;
     }
@@ -146,10 +143,7 @@ public final class CompilationEngine
         VarType returnType = determineVarType(true);
 
         advance();
-        if (!(currentToken instanceof Identifier nameIdentifier)) {
-            throw reportError("Expecting subroutine name");
-        }
-        subroutineName = nameIdentifier.value();
+        subroutineName = consumeIdentifier();
         report("Subroutine %s %s %s".formatted(subroutineType,
                                                returnType == null ? "void" : returnType.toString(),
                                                subroutineName));
@@ -166,31 +160,28 @@ public final class CompilationEngine
     private void compileParameterList()
     {
         precondition(parameters == null);
+
         advance();
-        if (!Symbol.LEFT_PAREN.equals(currentToken)) {
-            throw reportError("Expecting '(' after subroutine name");
-        }
+        consumeSymbol(LEFT_PAREN);
+
         parameters = new LinkedHashMap<>();
+        boolean hasParameter = false;
         while (true) {
             advance();
-            if (Symbol.COMMA.equals(currentToken)) {
-                if (parameters.isEmpty()) {
-                    throw reportError("Unexpected comma");
-                }
-            } else if (Symbol.RIGHT_PAREN.equals(currentToken)) {
+            if (COMMA.equals(currentToken)) {
+                if (!hasParameter) throw reportError("Unexpected comma");
+                hasParameter = false;
+            } else if (RIGHT_PAREN.equals(currentToken)) {
+                if (!hasParameter) throw reportError("Unexpected comma");
                 break;
             } else {
                 VarType type = determineVarType(false);
                 advance();
-                if (!(currentToken instanceof Identifier identifier)) {
-                    throw reportError("Expecting parameter name");
-                }
-                String name = identifier.value();
-                if (parameters.containsKey(name)) {
-                    throw reportError("Duplicate parameter " + name);
-                }
+                String name = consumeIdentifier();
+                if (parameters.containsKey(name)) throw reportError("Duplicate parameter " + name);
                 report("parameter %s %s%n", type, name);
                 parameters.put(name, type);
+                hasParameter = true;
             }
         }
     }
@@ -249,7 +240,14 @@ public final class CompilationEngine
 
     private void compileStatement()
     {
-        precondition(currentToken instanceof Keyword);
+        precondition(currentToken instanceof Keyword ||
+                     SEMICOLON.equals(currentToken));
+
+        // empty statement
+        if (SEMICOLON.equals(currentToken)) {
+            return;
+        }
+
         switch ((Keyword) currentToken) {
 
             case LET -> compileLet();
@@ -313,12 +311,25 @@ public final class CompilationEngine
 
     private void compileWhile()
     {
-        precondition(Keyword.WHILE.equals(currentToken));
+        precondition(WHILE.equals(currentToken));
+
+        consumeSymbol(LEFT_PAREN);
+        VarType conditionType = compileExpression();
+        if (!PrimitiveType.BOOLEAN.equals(conditionType)) {
+            throw reportError("Condition must be boolean expression");
+        }
+        consumeSymbol(RIGHT_PAREN);
+        if (LEFT_BRACE.equals(tokenizer.peek())) {
+            compileBlock();
+        } else {
+            compileStatement();
+        }
     }
 
     private void compileDo()
     {
         precondition(Keyword.DO.equals(currentToken));
+
     }
 
     private void compileReturn()
@@ -342,6 +353,15 @@ public final class CompilationEngine
     private VarType compileExpression()
     {
         return null;
+    }
+
+    @NotNull
+    private String consumeIdentifier()
+    {
+        if (!(currentToken instanceof Identifier classIdentifier)) {
+            throw reportError("Expecting identifier token");
+        }
+        return classIdentifier.value();
     }
 
     private void consumeSymbol(@NotNull Symbol symbol)
