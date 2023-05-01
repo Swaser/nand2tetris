@@ -352,6 +352,36 @@ public final class CompilationEngine
     @NotNull
     private VarType compileExpression()
     {
+        VarType type = compileTerm();
+
+        while (tokenizer.peek() instanceof Symbol) {
+            Symbol op = (Symbol) advance();
+            VarType type2 = compileTerm();
+            if (!type.equals(type2)) throw reportError("Types must correspond");
+            switch (op) {
+
+                case PLUS,MINUS,STAR,SLASH -> {
+                    // type must be int
+                }
+                case AMP,PIPE -> {
+                    // type must be boolean
+                }
+                case LT, GT -> {
+                    // type must be int
+                }
+                case EQUAL -> {
+                    // type must be same?
+                }
+                default -> throw reportError("Unexpected token");
+            }
+            // todo handle op (no precedence rules, use parens instead)
+        }
+        return type;
+    }
+
+    @NotNull
+    private VarType compileTerm()
+    {
         return null;
     }
 
