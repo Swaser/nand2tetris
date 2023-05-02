@@ -361,7 +361,7 @@ public final class CompilationEngine
             switch (op) {
 
                 case PLUS,MINUS,STAR,SLASH -> {
-                    // type must be int
+                    if (!PrimitiveType.INT.equals(type)) throw reportError("Type must be int");
                 }
                 case AMP,PIPE -> {
                     // type must be boolean
