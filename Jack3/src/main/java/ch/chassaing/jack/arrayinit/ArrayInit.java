@@ -1,4 +1,4 @@
-package ch.chassaing.jack;
+package ch.chassaing.jack.arrayinit;
 
 /***
  * Excerpted from "The Definitive ANTLR 4 Reference",
@@ -10,8 +10,6 @@ package ch.chassaing.jack;
 ***/
 // import ANTLR's runtime libraries
 
-import ch.chassaing.jack.arrayinit.ArrayInitLexer;
-import ch.chassaing.jack.arrayinit.ArrayInitParser;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;

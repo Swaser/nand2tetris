@@ -1,4 +1,4 @@
-package ch.chassaing.jack;
+package ch.chassaing.jack.arrayinit;
 
 import ch.chassaing.jack.arrayinit.ArrayInitBaseListener;
 import ch.chassaing.jack.arrayinit.ArrayInitParser;
