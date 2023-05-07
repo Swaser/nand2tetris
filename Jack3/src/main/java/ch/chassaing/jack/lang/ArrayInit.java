@@ -1,4 +1,4 @@
-package ch.chassaing.jack.arrayinit;
+package ch.chassaing.jack.lang;
 
 /***
  * Excerpted from "The Definitive ANTLR 4 Reference",
@@ -10,6 +10,8 @@ package ch.chassaing.jack.arrayinit;
 ***/
 // import ANTLR's runtime libraries
 
+import ch.chassaing.jack.arrayinit.ArrayInitLexer;
+import ch.chassaing.jack.arrayinit.ArrayInitParser;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -19,19 +21,22 @@ import org.antlr.v4.runtime.tree.ParseTreeWalker;
 public class ArrayInit
 {
     public static void main(String[] args) throws Exception {
+
+        CharStreams.fromFileName(args[0]);
+
         // create a CharStream that reads from standard input
         CharStream input = CharStreams.fromStream(System.in);
 
         // create a lexer that feeds off of input CharStream
-        ArrayInitLexer lexer = new ArrayInitLexer(input);
+        JackLexer lexer = new JackLexer(input);
 
         // create a buffer of tokens pulled from the lexer
         CommonTokenStream tokens = new CommonTokenStream(lexer);
 
         // create a parser that feeds off the tokens buffer
-        ArrayInitParser parser = new ArrayInitParser(tokens);
+        JackParser parser = new JackParser(tokens);
 
-        ParseTree tree = parser.init(); // begin parsing at init rule
+        ParseTree tree = parser.class_();
 
         ParseTreeWalker walker = new ParseTreeWalker();
         walker.walk(new ShortToUnicodeString(), tree);

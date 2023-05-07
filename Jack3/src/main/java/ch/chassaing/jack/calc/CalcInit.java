@@ -10,9 +10,6 @@ package ch.chassaing.jack.calc;
 ***/
 // import ANTLR's runtime libraries
 
-import ch.chassaing.jack.arrayinit.ArrayInitLexer;
-import ch.chassaing.jack.arrayinit.ArrayInitParser;
-import ch.chassaing.jack.arrayinit.ShortToUnicodeString;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
