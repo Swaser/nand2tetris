@@ -9,10 +9,8 @@ public class JackC
 {
     public static void main(String[] args) throws Exception {
 
-        CharStreams.fromFileName(args[0]);
-
         // create a CharStream that reads from standard input
-        CharStream input = CharStreams.fromStream(System.in);
+        CharStream input = CharStreams.fromFileName(args[0]);
 
         // create a lexer that feeds off of input CharStream
         JackLexer lexer = new JackLexer(input);
@@ -28,5 +26,6 @@ public class JackC
         VMGeneratingVisitor visitor = new VMGeneratingVisitor();
         visitor.visit(tree);
         System.out.println(visitor.getClassName());
+        System.out.println(visitor.getClassVars());
     }
 }

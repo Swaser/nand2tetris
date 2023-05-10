@@ -33,7 +33,7 @@ public class CalcInit
 
         ParseTree tree = parser.prog(); // begin parsing at init rule
 
-        ParseTreeWalker walker = new ParseTreeWalker();
-        walker.walk(new Calculator(), tree);
+        MyCalcVisitor visitor = new MyCalcVisitor();
+        visitor.visit(tree);
     }
 }
