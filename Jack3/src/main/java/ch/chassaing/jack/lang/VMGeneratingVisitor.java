@@ -1,6 +1,7 @@
 package ch.chassaing.jack.lang;
 
 import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.misc.Interval;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
 import java.util.HashMap;
@@ -44,7 +45,8 @@ public class VMGeneratingVisitor
 
     private void raise(String message, ParserRuleContext ctx)
     {
-        throw new IllegalArgumentException(message + ": " + ctx.getText());
+        Interval sourceInterval = ctx.getSourceInterval();
+        throw new IllegalArgumentException(message + " at " + sourceInterval);
     }
 
     @Override
