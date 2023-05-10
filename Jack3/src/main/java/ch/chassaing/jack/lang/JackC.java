@@ -25,7 +25,7 @@ public class JackC
 
         VMGeneratingVisitor visitor = new VMGeneratingVisitor();
         visitor.visit(tree);
-        System.out.println(visitor.getClassName());
-        System.out.println(visitor.getClassVars());
+
+        System.out.println(visitor);
     }
 }

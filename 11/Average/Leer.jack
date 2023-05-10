@@ -1,4 +1,4 @@
 class Leer {
-    field bla;
-    static blu;
+    field int a;
+    static char b;
 }
