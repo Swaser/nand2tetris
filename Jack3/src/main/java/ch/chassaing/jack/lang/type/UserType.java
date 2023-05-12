@@ -1,7 +1,7 @@
-package ch.chassaing.jack.lang;
+package ch.chassaing.jack.lang.type;
 
 public record UserType(String name)
-        implements VarType
+        implements Type
 {
     @Override
     public String repr()

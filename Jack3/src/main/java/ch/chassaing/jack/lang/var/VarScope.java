@@ -1,4 +1,4 @@
-package ch.chassaing.jack.lang;
+package ch.chassaing.jack.lang.var;
 
 public enum VarScope
 {

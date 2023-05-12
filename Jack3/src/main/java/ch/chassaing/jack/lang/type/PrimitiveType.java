@@ -1,7 +1,7 @@
-package ch.chassaing.jack.lang;
+package ch.chassaing.jack.lang.type;
 
 public enum PrimitiveType
-        implements VarType
+        implements Type
 {
     INT, CHAR, BOOLEAN;
 

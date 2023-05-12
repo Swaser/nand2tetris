@@ -23,9 +23,9 @@ public class JackC
 
         ParseTree tree = parser.class_();
 
-        VMGeneratingVisitor visitor = new VMGeneratingVisitor();
+        CompilerVisitor visitor = new CompilerVisitor();
         visitor.visit(tree);
 
-        System.out.println(visitor);
+        System.out.println(visitor.classInfo);
     }
 }
