@@ -17,15 +17,19 @@ localVarDec : 'var' varDec;
 
 varDec : type ID (',' ID)* ';';
 
-type : 'int'     # intType
-     | 'char'    # charType
-     | 'boolean' # boolType
-     | ID        # userType
+type : 'int'
+     | 'char'
+     | 'boolean'
+     | ID
      ;
 
-subroutineDec : (FUNCTION|CONSTRUCTOR|METHOD) (VOID|type) ID parameterList block;
+subroutineDec : (FUNCTION|CONSTRUCTOR|METHOD)
+                (VOID|type)
+                ID
+                '(' (parameter (',' parameter)*)? ')'
+                block;
 
-parameterList : '(' ')';
+parameter : type ID;
 
 block : '{' '}';
 
@@ -38,7 +42,7 @@ FUNCTION : 'function';
 CONSTRUCTOR : 'constructor';
 METHOD : 'method';
 
-ID : [a-zA-Z]+;
+ID : ([a-zA-Z]|'_'+ [a-zA-Z0-9]) [_a-zA-Z0-9]*;
 LINE_COMMENT: '//' ~[\r\n]+ '\r'? '\n' -> skip;
 COMMENT : '/*' .*? '*/' -> skip;
 WS : [ \t\r\n]+ -> skip;

@@ -6,6 +6,7 @@ import org.jetbrains.annotations.NotNull;
 
 public record VarInfo(@NotNull String name,
                       @NotNull Type type,
-                      @NotNull VarScope scope)
+                      @NotNull VarScope scope,
+                      int order)
 {
 }

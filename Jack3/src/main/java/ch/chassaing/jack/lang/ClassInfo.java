@@ -1,9 +1,13 @@
 package ch.chassaing.jack.lang;
 
+import ch.chassaing.jack.lang.type.Type;
+import ch.chassaing.jack.lang.var.VarScope;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 public class ClassInfo
 {
@@ -12,26 +16,33 @@ public class ClassInfo
     private final Map<String, VarInfo> fields = new HashMap<>();
     private final Map<String, SubroutineInfo> subroutines = new HashMap<>();
 
-    public ClassInfo(String name)
+    public ClassInfo(@NotNull String name)
     {
         this.name = name;
     }
 
-    public boolean addStaticVar(@NotNull VarInfo varInfo)
+    @NotNull
+    public String getName() {return name;}
+
+    public boolean addStaticVar(@NotNull String name,
+                                @NotNull Type type)
     {
-        if (varIsDuplicate(varInfo.name())) {
+        if (varIsDuplicate(name)) {
             return false;
         }
-        statics.put(varInfo.name(), varInfo);
+        VarInfo varInfo = new VarInfo(name, type, VarScope.STATIC, statics.size());
+        statics.put(name, varInfo);
         return true;
     }
 
-    public boolean addFieldVar(@NotNull VarInfo varInfo)
+    public boolean addFieldVar(@NotNull String name,
+                               @NotNull Type type)
     {
-        if (varIsDuplicate(varInfo.name())) {
+        if (varIsDuplicate(name)) {
             return false;
         }
-        fields.put(varInfo.name(), varInfo);
+        VarInfo varInfo = new VarInfo(name, type, VarScope.FIELD, fields.size());
+        fields.put(name, varInfo);
         return true;
     }
 
@@ -47,5 +58,22 @@ public class ClassInfo
         }
         subroutines.put(subroutineInfo.name(), subroutineInfo);
         return true;
+    }
+
+    @Override
+    public String toString()
+    {
+        String sr = subroutines
+                .values()
+                .stream()
+                .map(Object::toString)
+                .collect(Collectors.joining("\n"));
+
+        return "ClassInfo{" +
+               "\n  name='" + name + '\'' +
+               ", \n  statics=" + statics +
+               ", \n  fields=" + fields +
+               ", \n" + sr +
+               "\n}";
     }
 }

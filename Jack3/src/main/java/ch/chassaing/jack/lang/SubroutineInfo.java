@@ -2,6 +2,7 @@ package ch.chassaing.jack.lang;
 
 import ch.chassaing.jack.lang.subroutine.SubroutineScope;
 import ch.chassaing.jack.lang.type.Type;
+import ch.chassaing.jack.lang.var.VarScope;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -30,6 +31,9 @@ public class SubroutineInfo
     public final Type returnType;
 
     @NotNull
+    public final Map<String, VarInfo> parameters = new HashMap<>();
+
+    @NotNull
     public final Map<String, VarInfo> locals = new HashMap<>();
 
     public SubroutineInfo(@NotNull ClassInfo classInfo,
@@ -44,19 +48,46 @@ public class SubroutineInfo
     }
 
     @NotNull
-    public String name() { return name; }
+    public String name() {return name;}
 
     /**
      * A local variable can be added to the {@link SubroutineInfo} if it
      * isn't yet in the local variables.
+     *
      * @return true if the variable can be added and false othervise.
      */
-    public boolean addLocalVar(@NotNull VarInfo varInfo) {
+    public boolean addLocalVar(@NotNull String name,
+                               @NotNull Type type)
+    {
 
-        if (locals.containsKey(varInfo.name())) {
+        if (locals.containsKey(name)) {
             return false;
         }
-        locals.put(varInfo.name(), varInfo);
+        VarInfo varInfo = new VarInfo(name, type, VarScope.LOCAL, locals.size());
+        locals.put(name, varInfo);
         return true;
+    }
+
+    public boolean addParameter(@NotNull String name,
+                                @NotNull Type type)
+    {
+        if (parameters.containsKey(name)) {
+            return false;
+        }
+        VarInfo varInfo = new VarInfo(name, type, VarScope.PARAMETER, parameters.size());
+        parameters.put(name, varInfo);
+        return true;
+    }
+
+    @Override
+    public String toString()
+    {
+        return "  SubroutineInfo{" +
+               "\n    name='" + name + '\'' +
+               ", \n    scope=" + scope +
+               ", \n    returnType=" + returnType +
+               ", \n    parameters=" + parameters +
+               ", \n    locals=" + locals +
+               "\n  }";
     }
 }
