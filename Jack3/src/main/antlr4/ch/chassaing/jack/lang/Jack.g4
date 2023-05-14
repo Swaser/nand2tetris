@@ -45,17 +45,21 @@ ifStatement : 'if' '(' expression ')' block ('else' (ifStatement|block))? ;
 
 whileStatement : 'while' '(' expression ')' block;
 
-doStatement : 'do' callSubroutine ';';
+doStatement : 'do' subroutineCall ';';
 
 returnStatement : 'return' expression? ';';
 
 block : '{' (localVarDec|statement)* '}';
 
-expression : 'exp';
-
-unary : ('!'|'-') unary
-      | primary
-      ;
+expression : equality;
+equality : comparison (('=='|'!=') comparison)*;
+comparison : term ( ('>'|'>='|'<='|'<') term)*;
+term : ID;
+//term    : factor (('-'|'+'|'|') factor)*;  // includes bitwise OR
+//factor  : unary (('/'|'*'|'&') unary)*;    // includes bitwise AND
+//unary   : ('!'|'-') unary
+//        | primary
+//        ;
 
 primary : NUMBER
         | STRING
@@ -76,6 +80,19 @@ BOOL : 'boolean';
 FUNCTION : 'function';
 CONSTRUCTOR : 'constructor';
 METHOD : 'method';
+
+NEG : '~';
+MINUS : '-';
+PLUS : '+';
+DIV : '/';
+MULT : '*';
+
+EQUAL : '==';
+UNEQUAL : '!=';
+LT : '<';
+LE : '<=';
+GT : '>';
+GE : '>=';
 
 ID : [_a-zA-Z] [_a-zA-Z0-9]*;
 NUMBER : [0-9]+;

@@ -15,6 +15,7 @@ class Leer {
             var int a32;
         }
 
+        let gugu = a == b == c != d < e;
 
     }
 

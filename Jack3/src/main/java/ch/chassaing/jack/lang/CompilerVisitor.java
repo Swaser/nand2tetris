@@ -7,6 +7,7 @@ import ch.chassaing.jack.lang.type.UserType;
 import ch.chassaing.jack.lang.var.VarScope;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.TerminalNode;
+import org.jetbrains.annotations.NotNull;
 
 import static java.util.Objects.requireNonNull;
 
@@ -22,9 +23,14 @@ public class CompilerVisitor
     private VarScope varScope; // the scope of the variable being declared
     private Type type;   // the type according to the type rule
 
-    private void raise(String message, ParserRuleContext ctx)
+    private void raise(@NotNull String message, @NotNull ParserRuleContext ctx)
     {
         throw new IllegalArgumentException(message + " at " + ctx.getText());
+    }
+
+    private void output(@NotNull String cmd)
+    {
+        System.out.println(cmd);
     }
 
     @Override
@@ -159,6 +165,63 @@ public class CompilerVisitor
             type = new UserType(ctx.ID().getText());
         }
         return null;
+    }
+
+    @Override
+    public Object visitEquality(JackParser.EqualityContext ctx)
+    {
+        TerminalNode op = null;
+        int childCount = ctx.getChildCount();
+        for (int i = 0; i < childCount; i++) {
+            if (i % 2 == 1) {
+                op = (TerminalNode) ctx.getChild(i);
+            } else {
+                visitComparison((JackParser.ComparisonContext) ctx.getChild(i));
+                if (op != null) {
+                    output("eq");
+                    if (op.getSymbol().getType() == JackParser.UNEQUAL) {
+                        output("not");
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    @Override
+    public Object visitComparison(JackParser.ComparisonContext ctx)
+    {
+        TerminalNode op = null;
+        int childCount = ctx.getChildCount();
+        for (int i=0; i<childCount; i++) {
+            if (i % 2 == 1) {
+                op = (TerminalNode) ctx.getChild(i);
+            } else {
+                visitTerm((JackParser.TermContext) ctx.getChild(i));
+                if (op != null) {
+                    int symbolType = op.getSymbol().getType();
+                    if (symbolType == JackParser.LT) {
+                        output("lt");
+                    } else if (symbolType == JackParser.LE) {
+                        output("gt");
+                        output("not");
+                    } else if (symbolType == JackParser.GT) {
+                        output("gt");
+                    } else { // must be "ge"
+                        output("lt");
+                        output("not");
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public Object visitTerm(JackParser.TermContext ctx)
+    {
+        return visitChildren(ctx);
     }
 
     private static void mustBeNull(Object object)
