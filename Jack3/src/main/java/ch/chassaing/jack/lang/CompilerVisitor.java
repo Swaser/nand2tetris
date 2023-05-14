@@ -40,7 +40,7 @@ public class CompilerVisitor
         requireNonNull(classInfo);
         mustBeNull(varScope);
         varScope = VarScope.STATIC;
-        visitChildren(ctx);
+        visitVarDec(ctx.varDec());
         varScope = null;
         return null;
     }
@@ -51,7 +51,7 @@ public class CompilerVisitor
         requireNonNull(classInfo);
         mustBeNull(varScope);
         varScope = VarScope.FIELD;
-        visitChildren(ctx);
+        visitVarDec(ctx.varDec());
         varScope = null;
         return null;
     }
@@ -84,6 +84,8 @@ public class CompilerVisitor
 
         ctx.parameter().forEach(this::visitParameter);
 
+        visitBlock(ctx.block());
+
         subroutineInfo = null;
         return null;
     }
@@ -102,6 +104,16 @@ public class CompilerVisitor
         }
 
         type = null;
+        return null;
+    }
+
+    @Override
+    public Object visitLocalVarDec(JackParser.LocalVarDecContext ctx)
+    {
+        mustBeNull(varScope);
+        varScope = VarScope.LOCAL;
+        visitVarDec(ctx.varDec());
+        varScope = null;
         return null;
     }
 

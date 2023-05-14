@@ -4,7 +4,16 @@ class Leer {
 
     function int bla(Rug a32, int five) {
 
+        var boolean h;
+        if (exp) {
+            var char c;
+            let gaga = exp;
+            return;
+        }
 
+        while (exp) {
+            var int a32;
+        }
 
 
     }
