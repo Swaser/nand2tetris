@@ -4,6 +4,12 @@ import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
 import org.antlr.v4.runtime.tree.ParseTree;
 
+import java.io.BufferedWriter;
+import java.io.OutputStreamWriter;
+import java.io.StringWriter;
+import java.io.Writer;
+import java.nio.charset.StandardCharsets;
+
 public class JackC
 {
     public static void main(String[] args) throws Exception {
@@ -40,9 +46,12 @@ public class JackC
 
         ParseTree tree = parser.class_();
 
-        CompilerVisitor visitor = new CompilerVisitor();
-        visitor.visit(tree);
+        Writer writer = new BufferedWriter(new OutputStreamWriter(System.out, StandardCharsets.UTF_8));
 
-        System.out.println(visitor.classInfo);
+        CompilerVisitor visitor = new CompilerVisitor(new NoOpVMWriter(writer));
+        visitor.visit(tree);
+        writer.flush();
+
+        System.out.println(visitor.getClassInfo());
     }
 }

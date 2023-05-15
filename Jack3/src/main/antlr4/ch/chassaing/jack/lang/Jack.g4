@@ -54,8 +54,8 @@ block : '{' (localVarDec|statement)* '}';
 expression : equality;
 equality : comparison (('=='|'!=') comparison)*;
 comparison : term ( ('>'|'>='|'<='|'<') term)*;
-term : ID;
-//term    : factor (('-'|'+'|'|') factor)*;  // includes bitwise OR
+term    : factor (('-'|'+'|'|') factor)*;  // includes bitwise OR
+factor : ID;
 //factor  : unary (('/'|'*'|'&') unary)*;    // includes bitwise AND
 //unary   : ('!'|'-') unary
 //        | primary
@@ -86,6 +86,9 @@ MINUS : '-';
 PLUS : '+';
 DIV : '/';
 MULT : '*';
+
+AND : '&';
+OR : '|';
 
 EQUAL : '==';
 UNEQUAL : '!=';

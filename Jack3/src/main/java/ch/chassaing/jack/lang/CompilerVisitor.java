@@ -17,20 +17,24 @@ import static java.util.Objects.requireNonNull;
 public class CompilerVisitor
         extends JackBaseVisitor<Object>
 {
-    public ClassInfo classInfo;
+    private final VMWriter vmWriter;
+
+    private ClassInfo classInfo;
     private SubroutineInfo subroutineInfo;
 
     private VarScope varScope; // the scope of the variable being declared
     private Type type;   // the type according to the type rule
 
+    public CompilerVisitor(VMWriter vmWriter) {this.vmWriter = vmWriter;}
+
+    public ClassInfo getClassInfo()
+    {
+        return classInfo;
+    }
+
     private void raise(@NotNull String message, @NotNull ParserRuleContext ctx)
     {
         throw new IllegalArgumentException(message + " at " + ctx.getText());
-    }
-
-    private void output(@NotNull String cmd)
-    {
-        System.out.println(cmd);
     }
 
     @Override
@@ -178,9 +182,9 @@ public class CompilerVisitor
             } else {
                 visitComparison((JackParser.ComparisonContext) ctx.getChild(i));
                 if (op != null) {
-                    output("eq");
+                    vmWriter.writeArithmetic(Command.EQ);
                     if (op.getSymbol().getType() == JackParser.UNEQUAL) {
-                        output("not");
+                        vmWriter.writeArithmetic(Command.NOT);
                     }
                 }
             }
@@ -200,18 +204,18 @@ public class CompilerVisitor
             } else {
                 visitTerm((JackParser.TermContext) ctx.getChild(i));
                 if (op != null) {
-                    int symbolType = op.getSymbol().getType();
-                    if (symbolType == JackParser.LT) {
-                        output("lt");
-                    } else if (symbolType == JackParser.LE) {
-                        output("gt");
-                        output("not");
-                    } else if (symbolType == JackParser.GT) {
-                        output("gt");
+                    if (op.getSymbol().getType() == JackParser.LT) {
+                        vmWriter.writeArithmetic(Command.LT);
+                    } else if (op.getSymbol().getType() == JackParser.LE) {
+                        vmWriter.writeArithmetic(Command.GT);
+                        vmWriter.writeArithmetic(Command.NOT);
+                    } else if (op.getSymbol().getType() == JackParser.GT) {
+                        vmWriter.writeArithmetic(Command.GT);
                     } else { // must be "ge"
-                        output("lt");
-                        output("not");
+                        vmWriter.writeArithmetic(Command.LT);
+                        vmWriter.writeArithmetic(Command.NOT);
                     }
+                    op = null;
                 }
             }
         }
@@ -221,7 +225,26 @@ public class CompilerVisitor
     @Override
     public Object visitTerm(JackParser.TermContext ctx)
     {
-        return visitChildren(ctx);
+        TerminalNode op = null;
+        int childCount = ctx.getChildCount();
+        for (int i=0; i<childCount; i++) {
+            if (i %2 == 1) {
+                op = (TerminalNode) ctx.getChild(i);
+            } else {
+                visitFactor((JackParser.FactorContext) ctx.getChild(i));
+                if (op != null) {
+                    if (op.getSymbol().getType() == JackParser.MULT) {
+                        vmWriter.writeCall("Math.multiply", 2);
+                    } else if (op.getSymbol().getType() == JackParser.DIV) {
+                        vmWriter.writeCall("Math.divide", 2);
+                    } else { // must be OR
+                        vmWriter.writeArithmetic(Command.OR); // must be OR
+                    }
+                    op = null;
+                }
+            }
+        }
+        return null;
     }
 
     private static void mustBeNull(Object object)
