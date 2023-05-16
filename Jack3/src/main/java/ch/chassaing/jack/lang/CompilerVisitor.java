@@ -9,68 +9,69 @@ import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.TerminalNode;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Objects;
+
 import static java.util.Objects.requireNonNull;
 
 /**
  * One per class
  */
 public class CompilerVisitor
-        extends JackBaseVisitor<Object>
-{
+        extends JackBaseVisitor<Type> {
     private final VMWriter vmWriter;
 
     private ClassInfo classInfo;
     private SubroutineInfo subroutineInfo;
 
     private VarScope varScope; // the scope of the variable being declared
-    private Type type;   // the type according to the type rule
 
     public CompilerVisitor(VMWriter vmWriter) {this.vmWriter = vmWriter;}
 
-    public ClassInfo getClassInfo()
-    {
+    public ClassInfo getClassInfo() {
+
         return classInfo;
     }
 
-    private void raise(@NotNull String message, @NotNull ParserRuleContext ctx)
-    {
+    private void raise(@NotNull String message,
+                       @NotNull ParserRuleContext ctx) {
+
         throw new IllegalArgumentException(message + " at " + ctx.getText());
     }
 
     @Override
-    public Object visitClass(JackParser.ClassContext ctx)
-    {
+    public Type visitClass(JackParser.ClassContext ctx) {
+
         classInfo = new ClassInfo(ctx.ID().getText());
-        return visitChildren(ctx);
+        visitChildren(ctx);
+        return new UserType(classInfo.getName());
     }
 
     @Override
-    public Object visitStaticVarDec(JackParser.StaticVarDecContext ctx)
-    {
+    public Type visitStaticVarDec(JackParser.StaticVarDecContext ctx) {
+
         requireNonNull(classInfo);
         mustBeNull(varScope);
         varScope = VarScope.STATIC;
-        visitVarDec(ctx.varDec());
+        Type type = visitVarDec(ctx.varDec());
         varScope = null;
-        return null;
+        return type;
     }
 
     @Override
-    public Object visitFieldVarDec(JackParser.FieldVarDecContext ctx)
-    {
+    public Type visitFieldVarDec(JackParser.FieldVarDecContext ctx) {
+
         requireNonNull(classInfo);
         mustBeNull(varScope);
         varScope = VarScope.FIELD;
-        visitVarDec(ctx.varDec());
+        Type type = visitVarDec(ctx.varDec());
         varScope = null;
-        return null;
+        return type;
     }
 
     @Override
-    public Object visitSubroutineDec(JackParser.SubroutineDecContext ctx)
-    {
+    public Type visitSubroutineDec(JackParser.SubroutineDecContext ctx) {
+
         requireNonNull(classInfo);
-        mustBeNull(type);
         mustBeNull(subroutineInfo);
 
         SubroutineScope scope;
@@ -80,9 +81,7 @@ public class CompilerVisitor
 
         Type returnType = null;
         if (ctx.type() != null) {
-            visitType(ctx.type());
-            returnType = requireNonNull(type);
-            type = null;
+            returnType = requireNonNull(visitType(ctx.type()));
         }
 
         String name = ctx.ID().getText();
@@ -94,50 +93,50 @@ public class CompilerVisitor
 
         ctx.parameter().forEach(this::visitParameter);
 
-        visitBlock(ctx.block());
+        Type blockType = visitBlock(ctx.block());
+        if (!Objects.equals(returnType, blockType)) {
+            raise("Return type (%s) doesn't correspond to type returned in block (%s)"
+                          .formatted(returnType, blockType),
+                  ctx);
+        }
 
         subroutineInfo = null;
-        return null;
+        return returnType;
     }
 
     @Override
-    public Object visitParameter(JackParser.ParameterContext ctx)
-    {
+    public Type visitParameter(JackParser.ParameterContext ctx) {
+
         requireNonNull(subroutineInfo);
-        mustBeNull(type);
-        visitType(ctx.type()); // determine the type
-        requireNonNull(type);
+        Type type = visitType(ctx.type()); // determine the type
 
         String name = ctx.ID().getText();
         if (!subroutineInfo.addParameter(name, type)) {
             raise("Duplicate parameter " + name, ctx);
         }
 
-        type = null;
-        return null;
+        return type;
     }
 
     @Override
-    public Object visitLocalVarDec(JackParser.LocalVarDecContext ctx)
-    {
+    public Type visitLocalVarDec(JackParser.LocalVarDecContext ctx) {
+
         mustBeNull(varScope);
         varScope = VarScope.LOCAL;
-        visitVarDec(ctx.varDec());
+        Type type = visitVarDec(ctx.varDec());
         varScope = null;
-        return null;
+        return type;
     }
 
     @Override
-    public Object visitVarDec(JackParser.VarDecContext ctx)
-    {
+    public Type visitVarDec(JackParser.VarDecContext ctx) {
+
         requireNonNull(classInfo);
         requireNonNull(varScope);
         if (varScope == VarScope.LOCAL) {
             requireNonNull(subroutineInfo);
         }
-        mustBeNull(type);
-        visitType(ctx.type());
-        requireNonNull(type);
+        Type type = visitType(ctx.type());
 
         for (TerminalNode node : ctx.ID()) {
             String name = node.getText();
@@ -152,58 +151,68 @@ public class CompilerVisitor
             }
         }
 
-        type = null;
-        return null;
+        return type;
     }
 
     @Override
-    public Object visitType(JackParser.TypeContext ctx)
-    {
+    public Type visitType(JackParser.TypeContext ctx) {
+
         if (ctx.INT() != null) {
-            type = PrimitiveType.INT;
+            return PrimitiveType.INT;
         } else if (ctx.CHAR() != null) {
-            type = PrimitiveType.CHAR;
+            return PrimitiveType.CHAR;
         } else if (ctx.BOOL() != null) {
-            type = PrimitiveType.BOOLEAN;
+            return PrimitiveType.BOOLEAN;
         } else {
-            type = new UserType(ctx.ID().getText());
+            return new UserType(ctx.ID().getText());
         }
-        return null;
     }
 
     @Override
-    public Object visitEquality(JackParser.EqualityContext ctx)
-    {
+    public Type visitEquality(JackParser.EqualityContext ctx) {
+
         TerminalNode op = null;
+        Type previousType = null;
         int childCount = ctx.getChildCount();
         for (int i = 0; i < childCount; i++) {
             if (i % 2 == 1) {
                 op = (TerminalNode) ctx.getChild(i);
             } else {
-                visitComparison((JackParser.ComparisonContext) ctx.getChild(i));
+                Type type = visitComparison((JackParser.ComparisonContext) ctx.getChild(i));
                 if (op != null) {
+                    if (!Objects.equals(previousType, type)) {
+                        raise("Types must match : %s; %s".formatted(previousType, type), ctx);
+                    }
                     vmWriter.writeArithmetic(Command.EQ);
                     if (op.getSymbol().getType() == JackParser.UNEQUAL) {
                         vmWriter.writeArithmetic(Command.NOT);
                     }
+                    op = null;
                 }
+                previousType = type;
             }
         }
 
-        return null;
+        return childCount == 1 ? requireNonNull(previousType) : PrimitiveType.BOOLEAN;
     }
 
     @Override
-    public Object visitComparison(JackParser.ComparisonContext ctx)
-    {
+    public Type visitComparison(JackParser.ComparisonContext ctx) {
+
         TerminalNode op = null;
+        Type previousType = null;
         int childCount = ctx.getChildCount();
-        for (int i=0; i<childCount; i++) {
+        for (int i = 0; i < childCount; i++) {
             if (i % 2 == 1) {
                 op = (TerminalNode) ctx.getChild(i);
             } else {
-                visitTerm((JackParser.TermContext) ctx.getChild(i));
+                Type type = visitTerm((JackParser.TermContext) ctx.getChild(i));
                 if (op != null) {
+                    if (!Objects.equals(previousType, type) ||
+                        !(PrimitiveType.INT.equals(type) || PrimitiveType.CHAR.equals(type))) {
+                        raise("Types must match and be either int or char: %s; %s"
+                                      .formatted(previousType, type), ctx);
+                    }
                     if (op.getSymbol().getType() == JackParser.LT) {
                         vmWriter.writeArithmetic(Command.LT);
                     } else if (op.getSymbol().getType() == JackParser.LE) {
@@ -217,38 +226,120 @@ public class CompilerVisitor
                     }
                     op = null;
                 }
+                previousType = type;
             }
         }
-        return null;
+        return childCount == 1 ? previousType : PrimitiveType.BOOLEAN;
     }
 
     @Override
-    public Object visitTerm(JackParser.TermContext ctx)
-    {
+    public Type visitTerm(JackParser.TermContext ctx) {
+
         TerminalNode op = null;
+        Type previousType = null;
         int childCount = ctx.getChildCount();
-        for (int i=0; i<childCount; i++) {
-            if (i %2 == 1) {
+        for (int i = 0; i < childCount; i++) {
+            if (i % 2 == 1) {
                 op = (TerminalNode) ctx.getChild(i);
             } else {
-                visitFactor((JackParser.FactorContext) ctx.getChild(i));
+                Type type = visitFactor((JackParser.FactorContext) ctx.getChild(i));
                 if (op != null) {
+                    if (!Objects.equals(previousType, type) || !PrimitiveType.INT.equals(type)) {
+                        raise("Types must match : %s; %s".formatted(previousType, type), ctx);
+                    }
                     if (op.getSymbol().getType() == JackParser.MULT) {
                         vmWriter.writeCall("Math.multiply", 2);
                     } else if (op.getSymbol().getType() == JackParser.DIV) {
                         vmWriter.writeCall("Math.divide", 2);
                     } else { // must be OR
-                        vmWriter.writeArithmetic(Command.OR); // must be OR
+                        vmWriter.writeArithmetic(Command.OR);
                     }
                     op = null;
                 }
+                previousType = type;
             }
         }
-        return null;
+        return previousType;
     }
 
-    private static void mustBeNull(Object object)
-    {
+    @Override
+    public Type visitFactor(JackParser.FactorContext ctx) {
+
+        TerminalNode op = null;
+        Type previousType = null;
+        int childCount = ctx.getChildCount();
+        for (int i = 0; i < childCount; i++) {
+            if (i % 2 == 1) {
+                op = (TerminalNode) ctx.getChild(i);
+            } else {
+                Type type = visitUnary((JackParser.UnaryContext) ctx.getChild(i));
+                if (op != null) {
+                    if (!Objects.equals(previousType, type) || !PrimitiveType.INT.equals(type)) {
+                        raise("Types must match : %s; %s".formatted(previousType, type), ctx);
+                    }
+                    if (op.getSymbol().getType() == JackParser.PLUS) {
+                        vmWriter.writeArithmetic(Command.ADD);
+                    } else if (op.getSymbol().getType() == JackParser.MINUS) {
+                        vmWriter.writeArithmetic(Command.SUB);
+                    } else { // must be AND
+                        vmWriter.writeArithmetic(Command.AND);
+                    }
+                    op = null;
+                }
+                previousType = type;
+            }
+        }
+        return previousType;
+    }
+
+    @Override
+    public Type visitUnary(JackParser.UnaryContext ctx) {
+
+        visitChildren(ctx);
+        return PrimitiveType.INT;
+    }
+
+    @Override
+    public Type visitPrimary(JackParser.PrimaryContext ctx) {
+
+        if (ctx.NUMBER() != null) {
+            vmWriter.writePush(Segment.CONSTANT, Integer.parseInt(ctx.NUMBER().getText()));
+            return PrimitiveType.INT;
+        } else if (ctx.STRING() != null) {
+            // TODO write code to create String object
+            return new UserType("String");
+        } else if (ctx.subroutineCall() != null) {
+            return visitSubroutineCall(ctx.subroutineCall());
+        } else if (ctx.TRUE() != null) {
+            // TODO verify
+            vmWriter.writePush(Segment.CONSTANT, 0);
+            vmWriter.writeArithmetic(Command.NOT);
+            return PrimitiveType.BOOLEAN;
+        } else if (ctx.FALSE() != null) {
+            // TODO verify
+            vmWriter.writePush(Segment.CONSTANT, 0);
+            return PrimitiveType.BOOLEAN;
+        } else if (ctx.NULL() != null) {
+            // TODO verify
+            vmWriter.writePush(Segment.CONSTANT, 0);
+            return PrimitiveType.BOOLEAN;
+        } else if (ctx.THIS() == null) {
+            // TODO verify
+            vmWriter.writePush(Segment.POINTER, 0);
+            return new UserType(classInfo.getName());
+        } else {
+            return visitExpression(ctx.expression());
+        }
+    }
+
+    @Override
+    public Type visitSubroutineCall(JackParser.SubroutineCallContext ctx) {
+
+        return new UserType(ctx.ID().getText());
+    }
+
+    private static void mustBeNull(Object object) {
+
         if (object != null) {
             throw new IllegalArgumentException();
         }

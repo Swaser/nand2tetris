@@ -55,11 +55,10 @@ expression : equality;
 equality : comparison (('=='|'!=') comparison)*;
 comparison : term ( ('>'|'>='|'<='|'<') term)*;
 term    : factor (('-'|'+'|'|') factor)*;  // includes bitwise OR
-factor : ID;
-//factor  : unary (('/'|'*'|'&') unary)*;    // includes bitwise AND
-//unary   : ('!'|'-') unary
-//        | primary
-//        ;
+factor  : unary (('/'|'*'|'&') unary)*;    // includes bitwise AND
+unary   : ('!'|'-') unary
+        | primary
+        ;
 
 primary : NUMBER
         | STRING
@@ -70,7 +69,7 @@ primary : NUMBER
         | 'this'
         | '(' expression ')';
 
-subroutineCall : 'call';
+subroutineCall : ID '(' ')' ;
 
 VOID : 'void';
 INT : 'int';
@@ -96,6 +95,11 @@ LT : '<';
 LE : '<=';
 GT : '>';
 GE : '>=';
+
+TRUE : 'true';
+FALSE : 'false';
+NULL : 'null';
+THIS : 'this';
 
 ID : [_a-zA-Z] [_a-zA-Z0-9]*;
 NUMBER : [0-9]+;
