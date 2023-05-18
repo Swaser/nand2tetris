@@ -6,23 +6,16 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
-public class ClassInfo
+public record ClassInfo(@NotNull String name,
+                        @NotNull Map<String, VarInfo> statics,
+                        @NotNull Map<String, VarInfo> fields,
+                        @NotNull Map<String, SubroutineInfo> subroutines)
 {
-    private final String name;
-    private final Map<String, VarInfo> statics = new HashMap<>();
-    private final Map<String, VarInfo> fields = new HashMap<>();
-    private final Map<String, SubroutineInfo> subroutines = new HashMap<>();
-
     public ClassInfo(@NotNull String name)
     {
-        this.name = name;
+        this(name, new HashMap<>(), new HashMap<>(), new HashMap<>());
     }
-
-    @NotNull
-    public String getName() {return name;}
 
     public boolean addStaticVar(@NotNull String name,
                                 @NotNull Type type)
@@ -58,22 +51,5 @@ public class ClassInfo
         }
         subroutines.put(subroutineInfo.name(), subroutineInfo);
         return true;
-    }
-
-    @Override
-    public String toString()
-    {
-        String sr = subroutines
-                .values()
-                .stream()
-                .map(Object::toString)
-                .collect(Collectors.joining("\n"));
-
-        return "ClassInfo{" +
-               "\n  name='" + name + '\'' +
-               ", \n  statics=" + statics +
-               ", \n  fields=" + fields +
-               ", \n" + sr +
-               "\n}";
     }
 }

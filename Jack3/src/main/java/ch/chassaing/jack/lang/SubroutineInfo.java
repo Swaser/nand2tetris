@@ -8,47 +8,22 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
-public class SubroutineInfo
+public record SubroutineInfo(@NotNull ClassInfo classInfo,
+                             @NotNull String name,
+                             @NotNull SubroutineScope scope,
+                             @Nullable Type returnType,
+                             @NotNull Map<String, VarInfo> parameters,
+                             @NotNull Map<String, VarInfo> locals)
 {
-    /**
-     * The class this subroutine is part of.
-     */
-    @NotNull
-    public final ClassInfo classInfo;
-
-    @NotNull
-    public final String name;
-
-    @NotNull
-    public final SubroutineScope scope;
-
-    /**
-     * The return type of the subroutine. Can be {@code null} if
-     * the type is 'void'.
-     */
-    @Nullable
-    public final Type returnType;
-
-    @NotNull
-    public final Map<String, VarInfo> parameters = new HashMap<>();
-
-    @NotNull
-    public final Map<String, VarInfo> locals = new HashMap<>();
-
     public SubroutineInfo(@NotNull ClassInfo classInfo,
                           @NotNull String name,
                           @NotNull SubroutineScope scope,
                           @Nullable Type returnType)
     {
-        this.classInfo = classInfo;
-        this.name = name;
-        this.scope = scope;
-        this.returnType = returnType;
+        this(classInfo, name, scope, returnType, new HashMap<>(), new HashMap<>());
     }
-
-    @NotNull
-    public String name() {return name;}
 
     /**
      * A local variable can be added to the {@link SubroutineInfo} if it
@@ -79,15 +54,18 @@ public class SubroutineInfo
         return true;
     }
 
-    @Override
-    public String toString()
+    @NotNull
+    public Optional<VarInfo> findVar(@NotNull String varName)
     {
-        return "  SubroutineInfo{" +
-               "\n    name='" + name + '\'' +
-               ", \n    scope=" + scope +
-               ", \n    returnType=" + returnType +
-               ", \n    parameters=" + parameters +
-               ", \n    locals=" + locals +
-               "\n  }";
+        if (locals.containsKey(varName))
+            return Optional.of(locals.get(varName));
+        else if (parameters.containsKey(varName))
+            return Optional.of(parameters.get(varName));
+        else if (scope != SubroutineScope.FUNCTION && classInfo.fields().containsKey(varName))
+            return Optional.of(classInfo.fields().get(varName));
+        else if (classInfo.statics().containsKey(varName))
+            return Optional.of(classInfo.statics().get(varName));
+        else
+            return Optional.empty();
     }
 }

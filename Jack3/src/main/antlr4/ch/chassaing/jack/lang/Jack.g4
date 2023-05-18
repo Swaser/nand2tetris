@@ -60,14 +60,21 @@ unary   : ('!'|'-') unary
         | primary
         ;
 
-primary : NUMBER
+primary : ID
+        | NUMBER
         | STRING
-        | subroutineCall
-        | 'true'
-        | 'false'
-        | 'null'
-        | 'this'
-        | '(' expression ')';
+        ;
+
+//primary : NUMBER
+//        | STRING
+//        | subroutineCall
+//        | 'true'
+//        | 'false'
+//        | 'null'
+//        | 'this'
+//        | '(' expression ')'
+//        ;
+
 
 subroutineCall : ID '(' ')' ;
 

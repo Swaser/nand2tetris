@@ -10,6 +10,7 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
+import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
 
@@ -17,7 +18,8 @@ import static java.util.Objects.requireNonNull;
  * One per class
  */
 public class CompilerVisitor
-        extends JackBaseVisitor<Type> {
+        extends JackBaseVisitor<Type>
+{
     private final VMWriter vmWriter;
 
     private ClassInfo classInfo;
@@ -27,27 +29,30 @@ public class CompilerVisitor
 
     public CompilerVisitor(VMWriter vmWriter) {this.vmWriter = vmWriter;}
 
-    public ClassInfo getClassInfo() {
+    public ClassInfo getClassInfo()
+    {
 
         return classInfo;
     }
 
     private void raise(@NotNull String message,
-                       @NotNull ParserRuleContext ctx) {
-
+                       @NotNull ParserRuleContext ctx)
+    {
         throw new IllegalArgumentException(message + " at " + ctx.getText());
     }
 
     @Override
-    public Type visitClass(JackParser.ClassContext ctx) {
+    public Type visitClass(JackParser.ClassContext ctx)
+    {
 
         classInfo = new ClassInfo(ctx.ID().getText());
         visitChildren(ctx);
-        return new UserType(classInfo.getName());
+        return new UserType(classInfo.name());
     }
 
     @Override
-    public Type visitStaticVarDec(JackParser.StaticVarDecContext ctx) {
+    public Type visitStaticVarDec(JackParser.StaticVarDecContext ctx)
+    {
 
         requireNonNull(classInfo);
         mustBeNull(varScope);
@@ -58,7 +63,8 @@ public class CompilerVisitor
     }
 
     @Override
-    public Type visitFieldVarDec(JackParser.FieldVarDecContext ctx) {
+    public Type visitFieldVarDec(JackParser.FieldVarDecContext ctx)
+    {
 
         requireNonNull(classInfo);
         mustBeNull(varScope);
@@ -69,7 +75,8 @@ public class CompilerVisitor
     }
 
     @Override
-    public Type visitSubroutineDec(JackParser.SubroutineDecContext ctx) {
+    public Type visitSubroutineDec(JackParser.SubroutineDecContext ctx)
+    {
 
         requireNonNull(classInfo);
         mustBeNull(subroutineInfo);
@@ -88,7 +95,7 @@ public class CompilerVisitor
         subroutineInfo = new SubroutineInfo(classInfo, name, scope, returnType);
         classInfo.addSubroutine(subroutineInfo);
         if (scope == SubroutineScope.METHOD) {
-            subroutineInfo.addParameter("this", new UserType(classInfo.getName()));
+            subroutineInfo.addParameter("this", new UserType(classInfo.name()));
         }
 
         ctx.parameter().forEach(this::visitParameter);
@@ -105,7 +112,8 @@ public class CompilerVisitor
     }
 
     @Override
-    public Type visitParameter(JackParser.ParameterContext ctx) {
+    public Type visitParameter(JackParser.ParameterContext ctx)
+    {
 
         requireNonNull(subroutineInfo);
         Type type = visitType(ctx.type()); // determine the type
@@ -119,7 +127,14 @@ public class CompilerVisitor
     }
 
     @Override
-    public Type visitLocalVarDec(JackParser.LocalVarDecContext ctx) {
+    public Type visitBlock(JackParser.BlockContext ctx)
+    {
+        return visitChildren(ctx);
+    }
+
+    @Override
+    public Type visitLocalVarDec(JackParser.LocalVarDecContext ctx)
+    {
 
         mustBeNull(varScope);
         varScope = VarScope.LOCAL;
@@ -129,7 +144,8 @@ public class CompilerVisitor
     }
 
     @Override
-    public Type visitVarDec(JackParser.VarDecContext ctx) {
+    public Type visitVarDec(JackParser.VarDecContext ctx)
+    {
 
         requireNonNull(classInfo);
         requireNonNull(varScope);
@@ -155,7 +171,8 @@ public class CompilerVisitor
     }
 
     @Override
-    public Type visitType(JackParser.TypeContext ctx) {
+    public Type visitType(JackParser.TypeContext ctx)
+    {
 
         if (ctx.INT() != null) {
             return PrimitiveType.INT;
@@ -169,7 +186,29 @@ public class CompilerVisitor
     }
 
     @Override
-    public Type visitEquality(JackParser.EqualityContext ctx) {
+    public Type visitLetStatement(JackParser.LetStatementContext ctx)
+    {
+        VarInfo varInfo = getVarInfo(ctx, ctx.ID().getText());
+        Type varType = varInfo.type();
+        Type expressionType = visitExpression(ctx.expression());
+        // expression is now on stack
+
+        if (!varType.equals(expressionType)) {
+            raise("Expression type (%s) is not of the variable type (%s)"
+                          .formatted(expressionType, varType), ctx);
+        }
+        switch (varInfo.scope()) {
+            case STATIC -> vmWriter.writePop(Segment.STATIC, varInfo.order());
+            case FIELD -> vmWriter.writePop(Segment.THIS, varInfo.order());
+            case PARAMETER -> vmWriter.writePop(Segment.ARGUMENT, varInfo.order());
+            case LOCAL -> vmWriter.writePop(Segment.LOCAL, varInfo.order());
+        }
+        return varType;
+    }
+
+    @Override
+    public Type visitEquality(JackParser.EqualityContext ctx)
+    {
 
         TerminalNode op = null;
         Type previousType = null;
@@ -197,7 +236,8 @@ public class CompilerVisitor
     }
 
     @Override
-    public Type visitComparison(JackParser.ComparisonContext ctx) {
+    public Type visitComparison(JackParser.ComparisonContext ctx)
+    {
 
         TerminalNode op = null;
         Type previousType = null;
@@ -233,7 +273,8 @@ public class CompilerVisitor
     }
 
     @Override
-    public Type visitTerm(JackParser.TermContext ctx) {
+    public Type visitTerm(JackParser.TermContext ctx)
+    {
 
         TerminalNode op = null;
         Type previousType = null;
@@ -263,7 +304,8 @@ public class CompilerVisitor
     }
 
     @Override
-    public Type visitFactor(JackParser.FactorContext ctx) {
+    public Type visitFactor(JackParser.FactorContext ctx)
+    {
 
         TerminalNode op = null;
         Type previousType = null;
@@ -293,52 +335,95 @@ public class CompilerVisitor
     }
 
     @Override
-    public Type visitUnary(JackParser.UnaryContext ctx) {
+    public Type visitUnary(JackParser.UnaryContext ctx)
+    {
 
         visitChildren(ctx);
         return PrimitiveType.INT;
     }
 
     @Override
-    public Type visitPrimary(JackParser.PrimaryContext ctx) {
+    public Type visitPrimary(JackParser.PrimaryContext ctx)
+    {
 
         if (ctx.NUMBER() != null) {
             vmWriter.writePush(Segment.CONSTANT, Integer.parseInt(ctx.NUMBER().getText()));
             return PrimitiveType.INT;
         } else if (ctx.STRING() != null) {
-            // TODO write code to create String object
+            vmWriter.writeCall("String.new",0); // neuer String auf dem Stack
+            String text = ctx.STRING().getText();
+            for (int i=1; i<text.length()-1; i++) {
+                // THIS sollte auf dem Stack bleiben
+                vmWriter.writePush(Segment.CONSTANT, text.charAt(i));
+                vmWriter.writeCall("String.append", 2); // this und char
+            }
             return new UserType("String");
-        } else if (ctx.subroutineCall() != null) {
-            return visitSubroutineCall(ctx.subroutineCall());
-        } else if (ctx.TRUE() != null) {
-            // TODO verify
-            vmWriter.writePush(Segment.CONSTANT, 0);
-            vmWriter.writeArithmetic(Command.NOT);
-            return PrimitiveType.BOOLEAN;
-        } else if (ctx.FALSE() != null) {
-            // TODO verify
-            vmWriter.writePush(Segment.CONSTANT, 0);
-            return PrimitiveType.BOOLEAN;
-        } else if (ctx.NULL() != null) {
-            // TODO verify
-            vmWriter.writePush(Segment.CONSTANT, 0);
-            return PrimitiveType.BOOLEAN;
-        } else if (ctx.THIS() == null) {
-            // TODO verify
-            vmWriter.writePush(Segment.POINTER, 0);
-            return new UserType(classInfo.getName());
-        } else {
-            return visitExpression(ctx.expression());
         }
+
+        // must be ID
+        VarInfo varInfo = getVarInfo(ctx.getParent(), ctx.ID().getText());
+        switch (varInfo.scope()) {
+            case STATIC -> vmWriter.writePush(Segment.STATIC, varInfo.order());
+            case FIELD -> vmWriter.writePush(Segment.THIS, varInfo.order());
+            case PARAMETER -> vmWriter.writePush(Segment.ARGUMENT, varInfo.order());
+            case LOCAL -> vmWriter.writePush(Segment.LOCAL, varInfo.order());
+        }
+        return varInfo.type();
+
+//        if (ctx.NUMBER() != null) {
+//            vmWriter.writePush(Segment.CONSTANT, Integer.parseInt(ctx.NUMBER().getText()));
+//            return PrimitiveType.INT;
+//        } else if (ctx.STRING() != null) {
+//            vmWriter.writeCall("String.new",0); // neuer String auf dem Stack
+//            String text = ctx.STRING().getText();
+//            for (int i=1; i<text.length()-1; i++) {
+//                // THIS sollte auf dem Stack bleiben
+//                vmWriter.writePush(Segment.CONSTANT, text.charAt(i));
+//                vmWriter.writeCall("String.append", 2); // this und char
+//            }
+//            return new UserType("String");
+//        } else if (ctx.subroutineCall() != null) {
+//            return visitSubroutineCall(ctx.subroutineCall());
+//        } else if (ctx.TRUE() != null) {
+//            // TRUE ist -1
+//            vmWriter.writePush(Segment.CONSTANT, 0);
+//            vmWriter.writeArithmetic(Command.NOT);
+//            return PrimitiveType.BOOLEAN;
+//        } else if (ctx.FALSE() != null) {
+//            // FALSE ist 0
+//            vmWriter.writePush(Segment.CONSTANT, 0);
+//            return PrimitiveType.BOOLEAN;
+//        } else if (ctx.NULL() != null) {
+//            vmWriter.writePush(Segment.CONSTANT, 0);
+//            return PrimitiveType.BOOLEAN;
+//        } else if (ctx.THIS() == null) {
+//            vmWriter.writePush(Segment.POINTER, 0);
+//            return new UserType(classInfo.getName());
+//        } else {
+////            return visitExpression(ctx.expression());
+//            return null;
+//        }
+    }
+
+    @NotNull
+    private VarInfo getVarInfo(ParserRuleContext ctx, String varName)
+    {
+        VarInfo varInfo = subroutineInfo.findVar(varName).orElse(null);
+        if (varInfo == null) {
+            raise("Couldn't find variable " + varName, ctx);
+        }
+        return varInfo;
     }
 
     @Override
-    public Type visitSubroutineCall(JackParser.SubroutineCallContext ctx) {
+    public Type visitSubroutineCall(JackParser.SubroutineCallContext ctx)
+    {
 
         return new UserType(ctx.ID().getText());
     }
 
-    private static void mustBeNull(Object object) {
+    private static void mustBeNull(Object object)
+    {
 
         if (object != null) {
             throw new IllegalArgumentException();

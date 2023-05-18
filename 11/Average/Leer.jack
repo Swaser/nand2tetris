@@ -5,18 +5,23 @@ class Leer {
     function int bla(Rug a32, int five) {
 
         var boolean h;
-        if (exp) {
+        if (h) {
             var char c;
-            let gaga = exp;
-            return;
+            var int d;
+            let d = 15;
+            return 3;
         }
 
-        while (exp) {
+        while (h) {
             var int a32;
         }
 
-        let gugu = a == b == c != d < e;
+        var int f;
+        var int g;
+        let f = g;
+        let h = f < g;
 
+        var int x;
     }
 
     constructor void Leer() {
