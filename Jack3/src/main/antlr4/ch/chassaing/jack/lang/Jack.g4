@@ -49,7 +49,8 @@ doStatement : 'do' subroutineCall ';';
 
 returnStatement : 'return' expression? ';';
 
-block : '{' (localVarDec|statement)* '}';
+block : '{' blockElements '}';
+blockElements :   (localVarDec|statement)*;
 
 expression : equality;
 equality : comparison (('=='|'!=') comparison)*;
@@ -60,7 +61,8 @@ unary   : ('!'|'-') unary
         | primary
         ;
 
-primary : ID
+primary : '(' expression ')'
+        | ID
         | NUMBER
         | STRING
         ;

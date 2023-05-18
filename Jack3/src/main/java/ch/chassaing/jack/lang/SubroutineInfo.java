@@ -68,4 +68,16 @@ public record SubroutineInfo(@NotNull ClassInfo classInfo,
         else
             return Optional.empty();
     }
+
+    @Override
+    public String toString()
+    {
+        return "SubroutineInfo{" +
+               "name='" + name + '\'' +
+               ", scope=" + scope +
+               ", returnType=" + returnType +
+               ", parameters=" + parameters +
+               ", locals=" + locals +
+               '}';
+    }
 }

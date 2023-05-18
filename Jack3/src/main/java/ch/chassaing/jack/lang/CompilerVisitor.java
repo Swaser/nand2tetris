@@ -31,7 +31,6 @@ public class CompilerVisitor
 
     public ClassInfo getClassInfo()
     {
-
         return classInfo;
     }
 
@@ -44,7 +43,6 @@ public class CompilerVisitor
     @Override
     public Type visitClass(JackParser.ClassContext ctx)
     {
-
         classInfo = new ClassInfo(ctx.ID().getText());
         visitChildren(ctx);
         return new UserType(classInfo.name());
@@ -53,7 +51,6 @@ public class CompilerVisitor
     @Override
     public Type visitStaticVarDec(JackParser.StaticVarDecContext ctx)
     {
-
         requireNonNull(classInfo);
         mustBeNull(varScope);
         varScope = VarScope.STATIC;
@@ -65,7 +62,6 @@ public class CompilerVisitor
     @Override
     public Type visitFieldVarDec(JackParser.FieldVarDecContext ctx)
     {
-
         requireNonNull(classInfo);
         mustBeNull(varScope);
         varScope = VarScope.FIELD;
@@ -77,7 +73,6 @@ public class CompilerVisitor
     @Override
     public Type visitSubroutineDec(JackParser.SubroutineDecContext ctx)
     {
-
         requireNonNull(classInfo);
         mustBeNull(subroutineInfo);
 
@@ -129,13 +124,15 @@ public class CompilerVisitor
     @Override
     public Type visitBlock(JackParser.BlockContext ctx)
     {
-        return visitChildren(ctx);
+        if (ctx.blockElements() != null) {
+            return visitBlockElements(ctx.blockElements());
+        }
+        return null;
     }
 
     @Override
     public Type visitLocalVarDec(JackParser.LocalVarDecContext ctx)
     {
-
         mustBeNull(varScope);
         varScope = VarScope.LOCAL;
         Type type = visitVarDec(ctx.varDec());
@@ -345,8 +342,10 @@ public class CompilerVisitor
     @Override
     public Type visitPrimary(JackParser.PrimaryContext ctx)
     {
-
-        if (ctx.NUMBER() != null) {
+        if (ctx.expression() != null) {
+            return visitExpression(ctx.expression());
+        }
+        else if (ctx.NUMBER() != null) {
             vmWriter.writePush(Segment.CONSTANT, Integer.parseInt(ctx.NUMBER().getText()));
             return PrimitiveType.INT;
         } else if (ctx.STRING() != null) {
