@@ -10,7 +10,6 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
-import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
 
@@ -95,7 +94,15 @@ public class CompilerVisitor
 
         ctx.parameter().forEach(this::visitParameter);
 
-        Type blockType = visitBlock(ctx.block());
+        for (JackParser.LocalVarDecContext localVarCtx : ctx.localVarDec()) {
+            visitLocalVarDec(localVarCtx);
+        }
+
+        Type blockType = null;
+        for (JackParser.StatementContext statementContext : ctx.statement()) {
+            blockType = visitStatement(statementContext);
+        }
+
         if (!Objects.equals(returnType, blockType)) {
             raise("Return type (%s) doesn't correspond to type returned in block (%s)"
                           .formatted(returnType, blockType),
@@ -119,15 +126,6 @@ public class CompilerVisitor
         }
 
         return type;
-    }
-
-    @Override
-    public Type visitBlock(JackParser.BlockContext ctx)
-    {
-        if (ctx.blockElements() != null) {
-            return visitBlockElements(ctx.blockElements());
-        }
-        return null;
     }
 
     @Override
@@ -201,6 +199,23 @@ public class CompilerVisitor
             case LOCAL -> vmWriter.writePop(Segment.LOCAL, varInfo.order());
         }
         return varType;
+    }
+
+    @Override
+    public Type visitReturnStatement(JackParser.ReturnStatementContext ctx)
+    {
+        Type returnType = null;
+        if (ctx.expression() != null) {
+            returnType = visitExpression(ctx.expression());
+        } else {
+            vmWriter.writePush(Segment.CONSTANT, 0);
+        }
+        vmWriter.writeReturn();
+        if (!Objects.equals(subroutineInfo.returnType(), returnType)) {
+            raise("Return type (%s) must correspond to subroutine type (%s)"
+                          .formatted(returnType, subroutineInfo.returnType()), ctx);
+        }
+        return returnType;
     }
 
     @Override
@@ -344,14 +359,13 @@ public class CompilerVisitor
     {
         if (ctx.expression() != null) {
             return visitExpression(ctx.expression());
-        }
-        else if (ctx.NUMBER() != null) {
+        } else if (ctx.NUMBER() != null) {
             vmWriter.writePush(Segment.CONSTANT, Integer.parseInt(ctx.NUMBER().getText()));
             return PrimitiveType.INT;
         } else if (ctx.STRING() != null) {
-            vmWriter.writeCall("String.new",0); // neuer String auf dem Stack
+            vmWriter.writeCall("String.new", 0); // neuer String auf dem Stack
             String text = ctx.STRING().getText();
-            for (int i=1; i<text.length()-1; i++) {
+            for (int i = 1; i < text.length() - 1; i++) {
                 // THIS sollte auf dem Stack bleiben
                 vmWriter.writePush(Segment.CONSTANT, text.charAt(i));
                 vmWriter.writeCall("String.append", 2); // this und char

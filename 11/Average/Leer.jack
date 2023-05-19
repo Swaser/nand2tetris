@@ -5,9 +5,10 @@ class Leer {
     function int bla(Rug a32, int five) {
 
         var boolean h;
+        var char c;
+        var int d,f,g;
+
         if (h) {
-            var char c;
-            var int d;
             let d = 15;
             return 3;
         }
@@ -16,12 +17,10 @@ class Leer {
             var int a32;
         }
 
-        var int f;
-        var int g;
         let f = g;
         let h = f < g;
 
-        var int x;
+        return g;
     }
 
     constructor void Leer() {

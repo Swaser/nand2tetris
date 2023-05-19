@@ -11,4 +11,6 @@ public interface VMWriter
     void writeArithmetic(Command command);
 
     void writeCall(String name, int nVars);
+
+    void writeReturn();
 }

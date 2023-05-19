@@ -60,4 +60,10 @@ public class NoOpVMWriter implements VMWriter
     {
         write("call %s %d%n".formatted(name, nVars));
     }
+
+    @Override
+    public void writeReturn()
+    {
+        write("return");
+    }
 }

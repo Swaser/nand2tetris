@@ -18,7 +18,10 @@ subroutineDec : (FUNCTION|CONSTRUCTOR|METHOD)
                 (VOID|type)
                 ID
                 '(' (parameter (',' parameter)*)? ')'
-                block;
+                '{'
+                localVarDec*
+                statement*
+                '}';
 
 parameter : type ID;
 
@@ -49,8 +52,7 @@ doStatement : 'do' subroutineCall ';';
 
 returnStatement : 'return' expression? ';';
 
-block : '{' blockElements '}';
-blockElements :   (localVarDec|statement)*;
+block : '{' statement* '}';
 
 expression : equality;
 equality : comparison (('=='|'!=') comparison)*;
