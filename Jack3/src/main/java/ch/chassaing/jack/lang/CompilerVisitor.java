@@ -489,7 +489,6 @@ public class CompilerVisitor
 
     private static void mustBeNull(Object object)
     {
-
         if (object != null) {
             throw new IllegalArgumentException();
         }
