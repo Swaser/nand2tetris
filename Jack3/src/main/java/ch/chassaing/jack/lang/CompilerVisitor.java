@@ -3,6 +3,7 @@ package ch.chassaing.jack.lang;
 import ch.chassaing.jack.lang.subroutine.SubroutineScope;
 import ch.chassaing.jack.lang.type.PrimitiveType;
 import ch.chassaing.jack.lang.type.Type;
+import ch.chassaing.jack.lang.type.UnknownType;
 import ch.chassaing.jack.lang.type.UserType;
 import ch.chassaing.jack.lang.var.VarScope;
 import org.antlr.v4.runtime.ParserRuleContext;
@@ -10,7 +11,6 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
-import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
 
@@ -117,7 +117,6 @@ public class CompilerVisitor
     @Override
     public Type visitParameter(JackParser.ParameterContext ctx)
     {
-
         requireNonNull(subroutineInfo);
         Type type = visitType(ctx.type()); // determine the type
 
@@ -438,46 +437,12 @@ public class CompilerVisitor
             case LOCAL -> vmWriter.writePush(Segment.LOCAL, varInfo.order());
         }
         return varInfo.type();
-
-//        if (ctx.NUMBER() != null) {
-//            vmWriter.writePush(Segment.CONSTANT, Integer.parseInt(ctx.NUMBER().getText()));
-//            return PrimitiveType.INT;
-//        } else if (ctx.STRING() != null) {
-//            vmWriter.writeCall("String.new",0); // neuer String auf dem Stack
-//            String text = ctx.STRING().getText();
-//            for (int i=1; i<text.length()-1; i++) {
-//                // THIS sollte auf dem Stack bleiben
-//                vmWriter.writePush(Segment.CONSTANT, text.charAt(i));
-//                vmWriter.writeCall("String.append", 2); // this und char
-//            }
-//            return new UserType("String");
-//        } else if (ctx.subroutineCall() != null) {
-//            return visitSubroutineCall(ctx.subroutineCall());
-//        } else if (ctx.TRUE() != null) {
-//            // TRUE ist -1
-//            vmWriter.writePush(Segment.CONSTANT, 0);
-//            vmWriter.writeArithmetic(Command.NOT);
-//            return PrimitiveType.BOOLEAN;
-//        } else if (ctx.FALSE() != null) {
-//            // FALSE ist 0
-//            vmWriter.writePush(Segment.CONSTANT, 0);
-//            return PrimitiveType.BOOLEAN;
-//        } else if (ctx.NULL() != null) {
-//            vmWriter.writePush(Segment.CONSTANT, 0);
-//            return PrimitiveType.BOOLEAN;
-//        } else if (ctx.THIS() == null) {
-//            vmWriter.writePush(Segment.POINTER, 0);
-//            return new UserType(classInfo.getName());
-//        } else {
-////            return visitExpression(ctx.expression());
-//            return null;
-//        }
     }
 
     @NotNull
     private VarInfo getVarInfo(ParserRuleContext ctx, String varName)
     {
-        VarInfo varInfo = subroutineInfo.findVar(varName).orElse(null);
+        VarInfo varInfo = subroutineInfo.findVar(varName);
         if (varInfo == null) {
             raise("Couldn't find variable " + varName, ctx);
         }
@@ -485,14 +450,14 @@ public class CompilerVisitor
     }
 
     @Override
-    public Type visitOwnCall(JackParser.OwnCallContext ctx)
+    public Type visitCallLocal(JackParser.CallLocalContext ctx)
     {
-        return super.visitOwnCall(ctx);
+        /* Muss Methode oder Funktion sein */
+        return super.visitCallLocal(ctx);
     }
 
-
     @Override
-    public Type visitOtherCall(JackParser.OtherCallContext ctx)
+    public Type visitCallRemote(JackParser.CallRemoteContext ctx)
     {
         /*
          In Nand 2 Tetris haben wir keine Kenntnis über andere Klassen.
@@ -501,7 +466,25 @@ public class CompilerVisitor
          - Sonst ist es eine Funktion oder ein Konstruktor
         */
         String other = ctx.ID(0).getText();
-        Optional<VarInfo> var = subroutineInfo.findVar(other); // TODO remove fucking optional
+        String fun = ctx.ID(1).getText();
+        int nArgs = ctx.expressionList().expression().size();
+        visitExpressionList(ctx.expressionList());
+        VarInfo var = subroutineInfo.findVar(other);
+        if (var != null) {
+            // ruft Methode auf objekt auf
+            Segment segment = switch (var.scope()) {
+                case STATIC -> Segment.STATIC;
+                case FIELD -> Segment.THIS;
+                case PARAMETER -> Segment.ARGUMENT;
+                case LOCAL -> Segment.LOCAL;
+            };
+            vmWriter.writePush(segment, var.order()); // Objekt auf den Stack holen
+            vmWriter.writeCall(other + "." + fun, nArgs + 1); // +1 für this
+        } else {
+            // Ruft Funktion oder Konstruktor auf
+            vmWriter.writeCall(other + "." + fun, nArgs);
+        }
+        return UnknownType.INSTANCE;
     }
 
     private static void mustBeNull(Object object)

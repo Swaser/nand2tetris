@@ -63,19 +63,17 @@ public final class SubroutineInfo
         return true;
     }
 
-    @NotNull
-    public Optional<VarInfo> findVar(@NotNull String varName)
+    @Nullable
+    public VarInfo findVar(@NotNull String varName)
     {
-        if (locals.containsKey(varName))
-            return Optional.of(locals.get(varName));
-        else if (parameters.containsKey(varName))
-            return Optional.of(parameters.get(varName));
-        else if (scope != SubroutineScope.FUNCTION && classInfo.fields().containsKey(varName))
-            return Optional.of(classInfo.fields().get(varName));
-        else if (classInfo.statics().containsKey(varName))
-            return Optional.of(classInfo.statics().get(varName));
-        else
-            return Optional.empty();
+        if (locals.containsKey(varName)) {
+            return locals.get(varName);
+        } else if (parameters.containsKey(varName)) {
+            return parameters.get(varName);
+        } else if (scope != SubroutineScope.FUNCTION && classInfo.fields().containsKey(varName)) {
+            return classInfo.fields().get(varName);
+        }
+        return classInfo.statics().get(varName);
     }
 
     @Override

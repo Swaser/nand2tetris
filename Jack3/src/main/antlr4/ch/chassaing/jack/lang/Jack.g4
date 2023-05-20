@@ -80,9 +80,10 @@ primary : '(' expression ')'
 //        ;
 
 
-subroutineCall : ID '(' expressionList ')'      #ownCall
-               | ID.ID '(' expressionList ')'   #otherCall
-               ;
+subroutineCall : callLocal | callRemote;
+
+callLocal : ID '(' expressionList ')';
+callRemote : ID.ID '(' expressionList ')';
 
 expressionList : (expression (',' expression)*)?;
 
