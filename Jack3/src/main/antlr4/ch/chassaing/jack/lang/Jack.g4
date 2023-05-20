@@ -80,7 +80,11 @@ primary : '(' expression ')'
 //        ;
 
 
-subroutineCall : ID '(' ')' ;
+subroutineCall : ID '(' expressionList ')'      #ownCall
+               | ID.ID '(' expressionList ')'   #otherCall
+               ;
+
+expressionList : (expression (',' expression)*)?;
 
 VOID : 'void';
 INT : 'int';

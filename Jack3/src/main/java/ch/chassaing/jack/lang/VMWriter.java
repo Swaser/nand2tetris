@@ -13,4 +13,14 @@ public interface VMWriter
     void writeCall(String name, int nVars);
 
     void writeReturn();
+
+    void writeLabel(String name);
+
+    void writeGoto(String name);
+
+    void writeIf(String name);
+
+    void writeFunction(String name, int nVars);
+
+    void close();
 }

@@ -10,6 +10,7 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
+import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
 
@@ -168,7 +169,6 @@ public class CompilerVisitor
     @Override
     public Type visitType(JackParser.TypeContext ctx)
     {
-
         if (ctx.INT() != null) {
             return PrimitiveType.INT;
         } else if (ctx.CHAR() != null) {
@@ -199,6 +199,62 @@ public class CompilerVisitor
             case LOCAL -> vmWriter.writePop(Segment.LOCAL, varInfo.order());
         }
         return varType;
+    }
+
+    @Override
+    public Type visitIfStatement(JackParser.IfStatementContext ctx)
+    {
+        String elseLabel = subroutineInfo.nextLabel();
+        String afterLabel = subroutineInfo.nextLabel();
+        Type expressionType = visitExpression(ctx.expression());
+        if (!expressionType.equals(PrimitiveType.BOOLEAN)) {
+            raise("Expression in if must be boolean", ctx);
+        }
+        vmWriter.writeArithmetic(Command.NOT);
+        vmWriter.writeIf(elseLabel);
+
+        visitBlock(ctx.block(0));
+        vmWriter.writeGoto(afterLabel);
+
+        vmWriter.writeLabel(elseLabel);
+        if (ctx.ifStatement() != null) {
+            visitIfStatement(ctx.ifStatement());
+        }
+        else if (ctx.block(1) != null) {
+            visitBlock(ctx.block(1));
+        }
+
+        vmWriter.writeLabel(afterLabel);
+        return null;
+    }
+
+    @Override
+    public Type visitWhileStatement(JackParser.WhileStatementContext ctx)
+    {
+        String whileLabel = subroutineInfo.nextLabel();
+        String afterLabel = subroutineInfo.nextLabel();
+
+        vmWriter.writeLabel(whileLabel);
+        Type expressionType = visitExpression(ctx.expression());
+        if (!expressionType.equals(PrimitiveType.BOOLEAN)) {
+            raise("Expression in while must be boolean", ctx);
+        }
+        vmWriter.writeArithmetic(Command.NOT);
+        vmWriter.writeIf(afterLabel);
+
+        visitBlock(ctx.block());
+        vmWriter.writeGoto(whileLabel);
+
+        vmWriter.writeLabel(afterLabel);
+        return null;
+    }
+
+    @Override
+    public Type visitDoStatement(JackParser.DoStatementContext ctx)
+    {
+        visitSubroutineCall(ctx.subroutineCall());
+        vmWriter.writePop(Segment.TEMP, 0);
+        return null;
     }
 
     @Override
@@ -429,10 +485,23 @@ public class CompilerVisitor
     }
 
     @Override
-    public Type visitSubroutineCall(JackParser.SubroutineCallContext ctx)
+    public Type visitOwnCall(JackParser.OwnCallContext ctx)
     {
+        return super.visitOwnCall(ctx);
+    }
 
-        return new UserType(ctx.ID().getText());
+
+    @Override
+    public Type visitOtherCall(JackParser.OtherCallContext ctx)
+    {
+        /*
+         In Nand 2 Tetris haben wir keine Kenntnis über andere Klassen.
+         Deshalb gilt folgende Konvention:
+         - Wenn der Aufgerufene eine lokale Variable ist, dann ist es eine Methode
+         - Sonst ist es eine Funktion oder ein Konstruktor
+        */
+        String other = ctx.ID(0).getText();
+        Optional<VarInfo> var = subroutineInfo.findVar(other); // TODO remove fucking optional
     }
 
     private static void mustBeNull(Object object)
