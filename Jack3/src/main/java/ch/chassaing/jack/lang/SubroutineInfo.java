@@ -9,7 +9,6 @@ import org.jetbrains.annotations.Nullable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 
 public final class SubroutineInfo
 {
@@ -17,8 +16,10 @@ public final class SubroutineInfo
     private final @NotNull String name;
     private final @NotNull SubroutineScope scope;
     private final @Nullable Type returnType;
-    private final @NotNull Map<String, VarInfo> parameters;
-    private final @NotNull Map<String, VarInfo> locals;
+    private final @NotNull Map<String, VarInfo> vars;
+
+    private int paramIdx;
+    private int localIdx;
     private int labelNo;
 
     public SubroutineInfo(@NotNull ClassInfo classInfo,
@@ -30,8 +31,13 @@ public final class SubroutineInfo
         this.name = name;
         this.scope = scope;
         this.returnType = returnType;
-        this.parameters = new HashMap<>();
-        this.locals = new HashMap<>();
+        this.vars = new HashMap<>();
+    }
+
+    @NotNull
+    public String name()
+    {
+        return name;
     }
 
     /**
@@ -43,37 +49,36 @@ public final class SubroutineInfo
     public boolean addLocalVar(@NotNull String name,
                                @NotNull Type type)
     {
-
-        if (locals.containsKey(name)) {
+        if (vars.containsKey(name)) {
             return false;
         }
-        VarInfo varInfo = new VarInfo(name, type, VarScope.LOCAL, locals.size());
-        locals.put(name, varInfo);
+        vars.put(name, new VarInfo(name, type, VarScope.LOCAL, localIdx++));
         return true;
     }
 
     public boolean addParameter(@NotNull String name,
                                 @NotNull Type type)
     {
-        if (parameters.containsKey(name)) {
+        if (vars.containsKey(name)) {
             return false;
         }
-        VarInfo varInfo = new VarInfo(name, type, VarScope.PARAMETER, parameters.size());
-        parameters.put(name, varInfo);
+        vars.put(name, new VarInfo(name, type, VarScope.PARAMETER, paramIdx++));
         return true;
     }
 
     @Nullable
     public VarInfo findVar(@NotNull String varName)
     {
-        if (locals.containsKey(varName)) {
-            return locals.get(varName);
-        } else if (parameters.containsKey(varName)) {
-            return parameters.get(varName);
-        } else if (scope != SubroutineScope.FUNCTION && classInfo.fields().containsKey(varName)) {
-            return classInfo.fields().get(varName);
+        if (vars.containsKey(varName)) {
+            return vars.get(varName);
         }
-        return classInfo.statics().get(varName);
+        VarInfo varInfo = classInfo.findVar(varName);
+        if (varInfo != null &&
+            varInfo.scope() == VarScope.FIELD &&
+            scope == SubroutineScope.FUNCTION) {
+            return null;
+        }
+        return varInfo;
     }
 
     @Override
@@ -83,8 +88,7 @@ public final class SubroutineInfo
                "name='" + name + '\'' +
                ", scope=" + scope +
                ", returnType=" + returnType +
-               ", parameters=" + parameters +
-               ", locals=" + locals +
+               ", vars=" + vars +
                '}';
     }
 
@@ -105,14 +109,12 @@ public final class SubroutineInfo
                Objects.equals(this.name, that.name) &&
                Objects.equals(this.scope, that.scope) &&
                Objects.equals(this.returnType, that.returnType) &&
-               Objects.equals(this.parameters, that.parameters) &&
-               Objects.equals(this.locals, that.locals);
+               Objects.equals(this.vars, that.vars);
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(classInfo, name, scope, returnType, parameters, locals);
+        return Objects.hash(classInfo, name, scope, returnType, vars);
     }
-
 }

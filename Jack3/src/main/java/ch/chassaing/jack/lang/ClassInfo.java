@@ -3,45 +3,49 @@ package ch.chassaing.jack.lang;
 import ch.chassaing.jack.lang.type.Type;
 import ch.chassaing.jack.lang.var.VarScope;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public record ClassInfo(@NotNull String name,
-                        @NotNull Map<String, VarInfo> statics,
-                        @NotNull Map<String, VarInfo> fields,
-                        @NotNull Map<String, SubroutineInfo> subroutines)
+public final class ClassInfo
 {
+    private final String name;
+    private final Map<String, VarInfo> vars = new HashMap<>();
+    private final Map<String, SubroutineInfo> subroutines = new HashMap<>();
+
+    private int staticIdx;
+    private int fieldIdx;
+
     public ClassInfo(@NotNull String name)
     {
-        this(name, new HashMap<>(), new HashMap<>(), new HashMap<>());
+        this.name = name;
+    }
+
+    @NotNull
+    public String name()
+    {
+        return name;
     }
 
     public boolean addStaticVar(@NotNull String name,
                                 @NotNull Type type)
     {
-        if (varIsDuplicate(name)) {
+        if (vars.containsKey(name)) {
             return false;
         }
-        VarInfo varInfo = new VarInfo(name, type, VarScope.STATIC, statics.size());
-        statics.put(name, varInfo);
+        vars.put(name, new VarInfo(name, type, VarScope.STATIC, staticIdx++));
         return true;
     }
 
     public boolean addFieldVar(@NotNull String name,
                                @NotNull Type type)
     {
-        if (varIsDuplicate(name)) {
+        if (vars.containsKey(name)) {
             return false;
         }
-        VarInfo varInfo = new VarInfo(name, type, VarScope.FIELD, fields.size());
-        fields.put(name, varInfo);
+        vars.put(name, new VarInfo(name, type, VarScope.FIELD, fieldIdx++));
         return true;
-    }
-
-    private boolean varIsDuplicate(@NotNull String varName)
-    {
-        return statics.containsKey(varName) || fields.containsKey(varName);
     }
 
     public boolean addSubroutine(@NotNull SubroutineInfo subroutineInfo)
@@ -51,5 +55,11 @@ public record ClassInfo(@NotNull String name,
         }
         subroutines.put(subroutineInfo.name(), subroutineInfo);
         return true;
+    }
+
+    @Nullable
+    public VarInfo findVar(String varName)
+    {
+        return vars.get(varName);
     }
 }

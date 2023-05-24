@@ -66,4 +66,34 @@ public class NoOpVMWriter implements VMWriter
     {
         write("return");
     }
+
+    @Override
+    public void writeLabel(String name)
+    {
+        write("(%s)".formatted(name));
+    }
+
+    @Override
+    public void writeGoto(String name)
+    {
+
+    }
+
+    @Override
+    public void writeIf(String name)
+    {
+
+    }
+
+    @Override
+    public void writeFunction(String name, int nVars)
+    {
+
+    }
+
+    @Override
+    public void close()
+    {
+
+    }
 }

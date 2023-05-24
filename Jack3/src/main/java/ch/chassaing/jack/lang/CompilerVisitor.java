@@ -88,7 +88,9 @@ public class CompilerVisitor
 
         String name = ctx.ID().getText();
         subroutineInfo = new SubroutineInfo(classInfo, name, scope, returnType);
-        classInfo.addSubroutine(subroutineInfo);
+        if (!classInfo.addSubroutine(subroutineInfo)) {
+            raise("Subroutine exists: " + name, ctx);
+        }
         if (scope == SubroutineScope.METHOD) {
             subroutineInfo.addParameter("this", new UserType(classInfo.name()));
         }
