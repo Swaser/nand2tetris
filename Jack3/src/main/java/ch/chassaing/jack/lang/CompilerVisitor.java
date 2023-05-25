@@ -399,8 +399,7 @@ public class CompilerVisitor
     @Override
     public Type visitUnary(JackParser.UnaryContext ctx) {
 
-        visitChildren(ctx);
-        return PrimitiveType.INT;
+        return visitChildren(ctx);
     }
 
     @Override
@@ -439,6 +438,7 @@ public class CompilerVisitor
             vmWriter.writePush(Segment.CONSTANT, 0);
             return PrimitiveType.BOOLEAN;
         } else if (ctx.NULL() != null) {
+            // NULL ist 0
             vmWriter.writePush(Segment.CONSTANT, 0);
             return UnknownType.INSTANCE;
         } else if (ctx.THIS() != null) {
