@@ -15,15 +15,16 @@ public final class SlurpingParser
         implements Parser
 {
     private final ArrayList<String> lines;
-    private       int               currentLine = 0;
-    private       String[]          fields;
+    private int currentLine = 0;
+    private String[] fields;
 
     public SlurpingParser(File file)
     {
         lines = new ArrayList<>();
         try (InputStream is = IOUtils.toBufferedInputStream(new FileInputStream(file))) {
             lines.addAll(IOUtils.readLines(is, StandardCharsets.UTF_8));
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             System.err.println("Problem reading file " + file.getName());
             e.printStackTrace();
             System.exit(2);
@@ -34,7 +35,7 @@ public final class SlurpingParser
     public int advance()
     {
         while (currentLine++ < lines.size()) {
-            String nextLine = StringUtils.trim(lines.get(currentLine-1)); // lines[] ist 0-basiert
+            String nextLine = StringUtils.trim(lines.get(currentLine - 1)); // lines[] ist 0-basiert
             if (nextLine.startsWith("//") || StringUtils.isBlank(nextLine)) {
                 continue;
             }
@@ -48,12 +49,26 @@ public final class SlurpingParser
     public Command command()
     {
         return switch (fields[0]) {
-            case "push" -> new Push(currentLine,
-                                    Segment.valueOf(fields[1].toUpperCase()),
-                                    Integer.parseInt(fields[2]));
-            case "pop" -> new Pop(currentLine,
-                                  Segment.valueOf(fields[1].toUpperCase()),
+            case "push" -> {
+                String segmentName = fields[1].toUpperCase();
+                if ("STATIC".equals(segmentName)) {
+                    yield new PushS(currentLine, fields[2]);
+                } else {
+                    yield new Push(currentLine,
+                                   Segment.valueOf(segmentName),
+                                   Integer.parseInt(fields[2]));
+                }
+            }
+            case "pop" -> {
+                String segmentName = fields[1].toUpperCase();
+                if ("STATIC".equals(segmentName)) {
+                    yield new PopS(currentLine, fields[2]);
+                } else {
+                    yield new Pop(currentLine,
+                                  Segment.valueOf(segmentName),
                                   Integer.parseInt(fields[2]));
+                }
+            }
             case "add" -> new Add(currentLine);
             case "sub" -> new Sub(currentLine);
             case "and" -> new And(currentLine);

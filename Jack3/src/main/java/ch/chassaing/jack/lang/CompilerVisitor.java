@@ -408,6 +408,15 @@ public class CompilerVisitor
 
         if (ctx.expression() != null) {
             return visitExpression(ctx.expression());
+        } else if (ctx.ID() != null) {
+            VarInfo varInfo = getVarInfo(ctx.getParent(), ctx.ID().getText());
+            switch (varInfo.scope()) {
+                case STATIC -> vmWriter.writePush(Segment.STATIC, varInfo.order());
+                case FIELD -> vmWriter.writePush(Segment.THIS, varInfo.order());
+                case PARAMETER -> vmWriter.writePush(Segment.ARGUMENT, varInfo.order());
+                case LOCAL -> vmWriter.writePush(Segment.LOCAL, varInfo.order());
+            }
+            return varInfo.type();
         } else if (ctx.NUMBER() != null) {
             vmWriter.writePush(Segment.CONSTANT, Integer.parseInt(ctx.NUMBER().getText()));
             return PrimitiveType.INT;
@@ -420,17 +429,28 @@ public class CompilerVisitor
                 vmWriter.writeCall("String.append", 2); // this und char
             }
             return new UserType("String");
+        } else if (ctx.TRUE() != null) {
+            // TRUE ist -1
+            vmWriter.writePush(Segment.CONSTANT, 0);
+            vmWriter.writeArithmetic(Command.NOT);
+            return PrimitiveType.BOOLEAN;
+        } else if (ctx.FALSE() != null) {
+            // FALSE ist 0
+            vmWriter.writePush(Segment.CONSTANT, 0);
+            return PrimitiveType.BOOLEAN;
+        } else if (ctx.NULL() != null) {
+            vmWriter.writePush(Segment.CONSTANT, 0);
+            return UnknownType.INSTANCE;
+        } else if (ctx.THIS() != null) {
+            if (subroutineInfo.scope() != SubroutineScope.METHOD) {
+                raise("this can only be used in method", ctx);
+            }
+            vmWriter.writePush(Segment.ARGUMENT, 0);
+            return new UserType(classInfo.name());
         }
 
-        // must be ID
-        VarInfo varInfo = getVarInfo(ctx.getParent(), ctx.ID().getText());
-        switch (varInfo.scope()) {
-            case STATIC -> vmWriter.writePush(Segment.STATIC, varInfo.order());
-            case FIELD -> vmWriter.writePush(Segment.THIS, varInfo.order());
-            case PARAMETER -> vmWriter.writePush(Segment.ARGUMENT, varInfo.order());
-            case LOCAL -> vmWriter.writePush(Segment.LOCAL, varInfo.order());
-        }
-        return varInfo.type();
+        raise("Unknown primary", ctx);
+        return null;
     }
 
     @NotNull
@@ -444,18 +464,19 @@ public class CompilerVisitor
         return varInfo;
     }
 
+    /* Muss Methode sein und kann nur von Methode aus aufgerufen werden */
     @Override
     public Type visitCallLocal(JackParser.CallLocalContext ctx) {
 
+        if (subroutineInfo.scope() != SubroutineScope.METHOD) {
+            raise("local calls can only be made from other methods", ctx);
+        }
         String name = ctx.ID().getText();
         int nArgs = ctx.expressionList().expression().size();
+        vmWriter.writePush(Segment.ARGUMENT,0); // Adresse des Objekts auf den Stack
         visitExpressionList(ctx.expressionList());
-        if (nArgs == 0) {
-            vmWriter.writePush(Segment.CONSTANT, 0);
-            nArgs = 1;
-        }
-        /* Muss Methode oder Funktion der Klasse sein */
-        return super.visitCallLocal(ctx);
+        vmWriter.writeCall(classInfo.name() + "." + name, nArgs + 1);
+        return UnknownType.INSTANCE;
     }
 
     @Override

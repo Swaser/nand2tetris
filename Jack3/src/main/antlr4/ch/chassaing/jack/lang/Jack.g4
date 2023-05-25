@@ -67,18 +67,11 @@ primary : '(' expression ')'
         | ID
         | NUMBER
         | STRING
+        | 'true'
+        | 'false'
+        | 'null'
+        | 'this'
         ;
-
-//primary : NUMBER
-//        | STRING
-//        | subroutineCall
-//        | 'true'
-//        | 'false'
-//        | 'null'
-//        | 'this'
-//        | '(' expression ')'
-//        ;
-
 
 subroutineCall : callLocal | callRemote;
 
