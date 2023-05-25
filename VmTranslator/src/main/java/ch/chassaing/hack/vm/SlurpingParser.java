@@ -15,13 +15,11 @@ public final class SlurpingParser
         implements Parser
 {
     private final ArrayList<String> lines;
-    private final String filename;
     private       int               currentLine = 0;
     private       String[]          fields;
 
-    public SlurpingParser(String filename, File file)
+    public SlurpingParser(File file)
     {
-        this.filename = filename;
         lines = new ArrayList<>();
         try (InputStream is = IOUtils.toBufferedInputStream(new FileInputStream(file))) {
             lines.addAll(IOUtils.readLines(is, StandardCharsets.UTF_8));
@@ -52,12 +50,10 @@ public final class SlurpingParser
         return switch (fields[0]) {
             case "push" -> new Push(currentLine,
                                     Segment.valueOf(fields[1].toUpperCase()),
-                                    Integer.parseInt(fields[2]),
-                                    filename);
+                                    Integer.parseInt(fields[2]));
             case "pop" -> new Pop(currentLine,
                                   Segment.valueOf(fields[1].toUpperCase()),
-                                  Integer.parseInt(fields[2]),
-                                  filename);
+                                  Integer.parseInt(fields[2]));
             case "add" -> new Add(currentLine);
             case "sub" -> new Sub(currentLine);
             case "and" -> new And(currentLine);

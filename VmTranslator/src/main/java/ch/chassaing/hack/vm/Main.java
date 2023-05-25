@@ -54,8 +54,7 @@ public class Main
         try (OutputStreamWriter writer = openForWriting(outPath)) {
             int iCount = 0;
             for (File vmFilePath : inPaths) {
-                String filename = vmFilePath.getName().replace(".vm", "");
-                Parser parser = new SlurpingParser(filename, vmFilePath);
+                Parser parser = new SlurpingParser(vmFilePath);
                 int line;
                 while ((line = parser.advance()) > 0) {
                     try {

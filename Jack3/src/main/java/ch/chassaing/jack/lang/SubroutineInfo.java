@@ -40,6 +40,9 @@ public final class SubroutineInfo
         return name;
     }
 
+    @NotNull
+    public SubroutineScope scope() {return scope;}
+
     /**
      * A local variable can be added to the {@link SubroutineInfo} if it
      * isn't yet in the local variables.
@@ -72,13 +75,7 @@ public final class SubroutineInfo
         if (vars.containsKey(varName)) {
             return vars.get(varName);
         }
-        VarInfo varInfo = classInfo.findVar(varName);
-        if (varInfo != null &&
-            varInfo.scope() == VarScope.FIELD &&
-            scope == SubroutineScope.FUNCTION) {
-            return null;
-        }
-        return varInfo;
+        return classInfo.findVar(varName);
     }
 
     @Override

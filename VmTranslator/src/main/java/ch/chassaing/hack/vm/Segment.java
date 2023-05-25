@@ -4,7 +4,6 @@ public enum Segment
 {
     ARGUMENT,
     LOCAL,
-    STATIC,
     CONSTANT,
     THIS,
     THAT,

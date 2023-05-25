@@ -7,8 +7,7 @@ import ch.chassaing.hack.vm.Segment;
  */
 public record Push(int line,
                    Segment segment,
-                   int value,
-                   String filename)
+                   int value)
     implements Command
 {
     public Push
