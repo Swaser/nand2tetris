@@ -1,5 +1,6 @@
 package ch.chassaing.jack.lang;
 
+import ch.chassaing.jack.lang.writer.GenericWriter;
 import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -47,7 +48,7 @@ public class JackC
 
         Writer writer = new BufferedWriter(new OutputStreamWriter(System.out, StandardCharsets.UTF_8));
 
-        CompilerVisitor visitor = new CompilerVisitor(new NoOpVMWriter(writer));
+        CompilerVisitor visitor = new CompilerVisitor(new GenericWriter(writer));
         visitor.visit(tree);
         writer.flush();
     }

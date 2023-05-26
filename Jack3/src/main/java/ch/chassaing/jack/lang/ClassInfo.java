@@ -62,4 +62,15 @@ public final class ClassInfo
     {
         return vars.get(varName);
     }
+
+    public int numberOfFields() {
+
+        int num = 0;
+        for (VarInfo varInfo : vars.values()) {
+            if (varInfo.scope() == VarScope.FIELD) {
+                num++;
+            }
+        }
+        return num;
+    }
 }

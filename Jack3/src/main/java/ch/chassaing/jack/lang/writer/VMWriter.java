@@ -1,4 +1,7 @@
-package ch.chassaing.jack.lang;
+package ch.chassaing.jack.lang.writer;
+
+import ch.chassaing.jack.lang.Command;
+import ch.chassaing.jack.lang.Segment;
 
 import java.io.IOException;
 

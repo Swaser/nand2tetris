@@ -1,10 +1,12 @@
-package ch.chassaing.jack.lang;
+package ch.chassaing.jack.lang.writer;
+
+import ch.chassaing.jack.lang.Command;
+import ch.chassaing.jack.lang.Segment;
 
 import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.io.Writer;
 
-public class NoOpVMWriter implements VMWriter
+public class GenericWriter implements VMWriter
 {
     public static class Exception extends RuntimeException {
 
@@ -26,7 +28,7 @@ public class NoOpVMWriter implements VMWriter
 
     private final Writer writer;
 
-    public NoOpVMWriter(Writer writer) {this.writer = writer;}
+    public GenericWriter(Writer writer) {this.writer = writer;}
 
     private void write(String s) {
         try {

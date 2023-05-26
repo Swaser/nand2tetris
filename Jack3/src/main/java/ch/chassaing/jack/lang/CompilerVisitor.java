@@ -6,6 +6,7 @@ import ch.chassaing.jack.lang.type.Type;
 import ch.chassaing.jack.lang.type.UnknownType;
 import ch.chassaing.jack.lang.type.UserType;
 import ch.chassaing.jack.lang.var.VarScope;
+import ch.chassaing.jack.lang.writer.VMWriter;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.TerminalNode;
 import org.jetbrains.annotations.NotNull;
@@ -111,6 +112,14 @@ public class CompilerVisitor
         // set up this
         if (scope == SubroutineScope.METHOD) {
             vmWriter.writePush(Segment.ARGUMENT, 0);
+            vmWriter.writePop(Segment.POINTER, 0);
+        } else if (scope == SubroutineScope.CONSTRUCTOR) {
+            int numberOfFields = classInfo.numberOfFields();
+            if (numberOfFields == 0) {
+                raise("Constructor in class without fields", ctx);
+            }
+            vmWriter.writePush(Segment.CONSTANT, numberOfFields);
+            vmWriter.writeCall("Memory.alloc", numberOfFields);
             vmWriter.writePop(Segment.POINTER, 0);
         }
 
