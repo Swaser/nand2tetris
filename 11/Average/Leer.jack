@@ -2,7 +2,7 @@ class Leer {
     field int a;
     static char b;
 
-    function int bla(Rug a32, int five) {
+    method int bla(Rug a32, int five) {
 
         var boolean h;
         var char c;
@@ -13,7 +13,10 @@ class Leer {
             return 3;
         }
 
+        let b = 13;
+
         while (h) {
+            let f = d * g + f;
         }
 
         let f = g;
@@ -23,6 +26,6 @@ class Leer {
     }
 
     constructor void Leer() {
-
+        return;
     }
 }

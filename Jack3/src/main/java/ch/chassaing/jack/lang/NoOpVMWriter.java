@@ -64,36 +64,41 @@ public class NoOpVMWriter implements VMWriter
     @Override
     public void writeReturn()
     {
-        write("return");
+        write("return\n");
     }
 
     @Override
     public void writeLabel(String name)
     {
-        write("(%s)".formatted(name));
+        write("(%s)%n".formatted(name));
     }
 
     @Override
     public void writeGoto(String name)
     {
-
+        write("goto %s%n".formatted(name));
     }
 
     @Override
     public void writeIf(String name)
     {
-
+        write("if-goto %s%n".formatted(name));
     }
 
     @Override
     public void writeFunction(String name, int nVars)
     {
-
+        write("function %s %d%n".formatted(name, nVars));
     }
 
     @Override
     public void close()
     {
-
+        try {
+            writer.close();
+        }
+        catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

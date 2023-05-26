@@ -93,9 +93,26 @@ public final class SubroutineInfo
 
     public String nextLabel()
     {
-        return "%s.%s_%d".formatted(classInfo.name(), name, labelNo++);
+        return "%s_%d".formatted(fullName(), labelNo++);
     }
 
+    @NotNull
+    public String fullName()
+    {
+        return "%s.%s".formatted(classInfo.name(), name);
+    }
+
+    public int numberOfLocalVars() {
+        
+        int num = 0;
+        for (VarInfo varInfo : vars.values()) {
+            if (varInfo.scope() == VarScope.LOCAL) {
+                num++;
+            }
+        }
+        return num;
+    }
+    
     @Override
     public boolean equals(Object obj)
     {

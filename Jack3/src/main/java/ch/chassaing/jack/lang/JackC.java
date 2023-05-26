@@ -6,7 +6,6 @@ import org.antlr.v4.runtime.tree.ParseTree;
 
 import java.io.BufferedWriter;
 import java.io.OutputStreamWriter;
-import java.io.StringWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 
@@ -51,7 +50,5 @@ public class JackC
         CompilerVisitor visitor = new CompilerVisitor(new NoOpVMWriter(writer));
         visitor.visit(tree);
         writer.flush();
-
-        System.out.println(visitor.getClassInfo());
     }
 }
