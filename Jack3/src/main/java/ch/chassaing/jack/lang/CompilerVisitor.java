@@ -377,12 +377,11 @@ public class CompilerVisitor
                     if (!Objects.equals(previousType, type) || !PrimitiveType.INT.equals(type)) {
                         raise("Types must match : %s; %s".formatted(previousType, type), ctx);
                     }
-                    if (op.getSymbol().getType() == JackParser.MULT) {
-                        vmWriter.writeCall("Math.multiply", 2);
-                    } else if (op.getSymbol().getType() == JackParser.DIV) {
-                        vmWriter.writeCall("Math.divide", 2);
-                    } else { // must be OR
-                        vmWriter.writeArithmetic(Command.OR);
+                    switch (op.getSymbol().getType()) {
+                        case JackParser.MINUS -> vmWriter.writeArithmetic(Command.SUB);
+                        case JackParser.PLUS -> vmWriter.writeArithmetic(Command.ADD);
+                        case JackParser.OR -> vmWriter.writeArithmetic(Command.OR);
+                        default -> raise("Unknown symbol " + op, ctx);
                     }
                     op = null;
                 }
@@ -407,12 +406,11 @@ public class CompilerVisitor
                     if (!Objects.equals(previousType, type) || !PrimitiveType.INT.equals(type)) {
                         raise("Types must match : %s; %s".formatted(previousType, type), ctx);
                     }
-                    if (op.getSymbol().getType() == JackParser.PLUS) {
-                        vmWriter.writeArithmetic(Command.ADD);
-                    } else if (op.getSymbol().getType() == JackParser.MINUS) {
-                        vmWriter.writeArithmetic(Command.SUB);
-                    } else { // must be AND
-                        vmWriter.writeArithmetic(Command.AND);
+                    switch (op.getSymbol().getType()) {
+                        case JackParser.DIV -> vmWriter.writeCall("Math.divide", 2);
+                        case JackParser.MULT -> vmWriter.writeCall("Math.multipy", 2);
+                        case JackParser.AND -> vmWriter.writeArithmetic(Command.AND);
+                        default -> raise("Unknown symbol " + op, ctx);
                     }
                     op = null;
                 }
@@ -425,6 +423,11 @@ public class CompilerVisitor
     @Override
     public Type visitUnary(JackParser.UnaryContext ctx)
     {
+        if (ctx.MINUS() != null) {
+            vmWriter.writeArithmetic(Command.NEG);
+        } else if (ctx.NOT() != null) {
+            vmWriter.writeArithmetic(Command.NOT);
+        }
         return visitChildren(ctx);
     }
 

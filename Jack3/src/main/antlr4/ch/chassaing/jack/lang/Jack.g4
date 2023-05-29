@@ -76,7 +76,7 @@ primary : '(' expression ')'
 subroutineCall : callLocal | callRemote;
 
 callLocal : ID '(' expressionList ')';
-callRemote : ID.ID '(' expressionList ')';
+callRemote : ID '.' ID '(' expressionList ')';
 
 expressionList : (expression (',' expression)*)?;
 
@@ -97,6 +97,7 @@ MULT : '*';
 
 AND : '&';
 OR : '|';
+NOT : '!';
 
 EQUAL : '==';
 UNEQUAL : '!=';
