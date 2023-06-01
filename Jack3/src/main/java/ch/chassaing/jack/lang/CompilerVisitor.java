@@ -1,10 +1,7 @@
 package ch.chassaing.jack.lang;
 
 import ch.chassaing.jack.lang.subroutine.SubroutineScope;
-import ch.chassaing.jack.lang.type.PrimitiveType;
-import ch.chassaing.jack.lang.type.Type;
-import ch.chassaing.jack.lang.type.UnknownType;
-import ch.chassaing.jack.lang.type.UserType;
+import ch.chassaing.jack.lang.type.*;
 import ch.chassaing.jack.lang.var.VarScope;
 import ch.chassaing.jack.lang.writer.VMWriter;
 import org.antlr.v4.runtime.ParserRuleContext;
@@ -22,7 +19,6 @@ import static java.util.Objects.requireNonNull;
 public class CompilerVisitor
         extends JackBaseVisitor<Type>
 {
-    public static final EnumSet<PrimitiveType> INT_TYPES = EnumSet.of(PrimitiveType.INT, PrimitiveType.CHAR);
     private final VMWriter vmWriter;
 
     private ClassInfo classInfo;
@@ -45,12 +41,19 @@ public class CompilerVisitor
         throw new IllegalArgumentException(message + " at " + ctx.getText());
     }
 
+    private void warn(@NotNull String message,
+                       @NotNull ParserRuleContext ctx)
+    {
+
+        System.out.println(message + " at " + ctx.getText());
+    }
+
     @Override
     public Type visitClass(JackParser.ClassContext ctx)
     {
         classInfo = new ClassInfo(ctx.ID().getText());
         visitChildren(ctx);
-        return new UserType(classInfo.name());
+        return Type.of(classInfo.name());
     }
 
     @Override
@@ -97,7 +100,7 @@ public class CompilerVisitor
             raise("Subroutine exists: " + name, ctx);
         }
         if (scope == SubroutineScope.METHOD) {
-            subroutineInfo.addParameter("this", new UserType(classInfo.name()));
+            subroutineInfo.addParameter("this", Type.of(classInfo.name()));
         }
 
         ctx.parameter().forEach(this::visitParameter);
@@ -123,15 +126,8 @@ public class CompilerVisitor
             vmWriter.writePop(Segment.POINTER, 0);
         }
 
-        Type blockType = null;
         for (JackParser.StatementContext statementContext : ctx.statement()) {
-            blockType = visitStatement(statementContext);
-        }
-
-        if (!Objects.equals(returnType, blockType)) {
-            raise("Return type (%s) doesn't correspond to type returned in block (%s)"
-                          .formatted(returnType, blockType),
-                  ctx);
+            visitStatement(statementContext);
         }
 
         subroutineInfo = null;
@@ -198,32 +194,59 @@ public class CompilerVisitor
         } else if (ctx.BOOL() != null) {
             return PrimitiveType.BOOLEAN;
         } else {
-            return new UserType(ctx.ID().getText());
+            return Type.of(ctx.ID().getText());
         }
     }
 
     @Override
-    public Type visitLetStatement(JackParser.LetStatementContext ctx)
+    public Type visitAssignVariable(JackParser.AssignVariableContext ctx)
     {
         VarInfo varInfo = getVarInfo(ctx, ctx.ID().getText());
-        Type varType = varInfo.type();
+        @NotNull Type varType = varInfo.type();
         Type expressionType = visitExpression(ctx.expression());
 
-        boolean compatible =
-                (INT_TYPES.contains(varType) && INT_TYPES.contains(expressionType)) ||
-                expressionType.equals(varType);
-
-        if (!compatible) {
+        if (!varType.compatible(expressionType)) {
             raise("Expression type (%s) is not of the variable type (%s)"
                           .formatted(expressionType, varType), ctx);
         }
-        switch (varInfo.scope()) {
-            case STATIC -> vmWriter.writePop(Segment.STATIC, varInfo.order());
-            case FIELD -> vmWriter.writePop(Segment.THIS, varInfo.order());
-            case PARAMETER -> vmWriter.writePop(Segment.ARGUMENT, varInfo.order());
-            case LOCAL -> vmWriter.writePop(Segment.LOCAL, varInfo.order());
+        vmWriter.writePop(varInfo.scope().segment, varInfo.order());
+        return null;
+    }
+
+    @Override
+    public Type visitAssignArray(JackParser.AssignArrayContext ctx) {
+
+        String varName = ctx.ID().getText();
+        VarInfo varInfo = getVarInfo(ctx, varName);
+        if (varInfo.type() != Array.INSTANCE) {
+            raise("%s must be of type Array".formatted(varInfo), ctx);
         }
-        return varType;
+        vmWriter.writePush(varInfo.scope().segment, varInfo.order());
+        Type idxType = visitExpression(ctx.expression(0));
+        if (!PrimitiveType.INT.compatible(idxType)) {
+            raise("expression must resolve to int type", ctx);
+        }
+        // expression is now on stack
+        // calculate address of array element
+        vmWriter.writeArithmetic(Command.ADD);
+        // address is now on stack
+
+        Type expressionType = visitExpression(ctx.expression(1));
+        if (!PrimitiveType.INT.compatible(expressionType)) {
+            raise("Expression type (%s) is not compatible with Array"
+                          .formatted(expressionType), ctx);
+        }
+
+        // here a swap the two top stack elements would be convenient
+
+        // now save expression in temp 0
+        vmWriter.writePop(Segment.TEMP, 0);
+        // address to that
+        vmWriter.writePop(Segment.POINTER, 1);
+
+        vmWriter.writePush(Segment.TEMP, 0);
+        vmWriter.writePop(Segment.THAT, 0);
+        return null;
     }
 
     @Override
@@ -232,7 +255,7 @@ public class CompilerVisitor
         String elseLabel = subroutineInfo.nextLabel();
         String afterLabel = subroutineInfo.nextLabel();
         Type expressionType = visitExpression(ctx.expression());
-        if (!expressionType.equals(PrimitiveType.BOOLEAN)) {
+        if (PrimitiveType.BOOLEAN != expressionType) {
             raise("Expression in if must be boolean", ctx);
         }
         vmWriter.writeArithmetic(Command.NOT);
@@ -260,7 +283,7 @@ public class CompilerVisitor
 
         vmWriter.writeLabel(whileLabel);
         Type expressionType = visitExpression(ctx.expression());
-        if (!expressionType.equals(PrimitiveType.BOOLEAN)) {
+        if (PrimitiveType.BOOLEAN != expressionType) {
             raise("Expression in while must be boolean", ctx);
         }
         vmWriter.writeArithmetic(Command.NOT);
@@ -291,8 +314,14 @@ public class CompilerVisitor
             vmWriter.writePush(Segment.CONSTANT, 0);
         }
         vmWriter.writeReturn();
-        if (!Objects.equals(subroutineInfo.returnType(), returnType)) {
-            raise("Return type (%s) must correspond to subroutine type (%s)"
+        if (subroutineInfo.returnType() == null &&
+            returnType != null) {
+            raise("Return type (%s) doesn't match void return type of subroutine"
+                          .formatted(returnType), ctx);
+        }
+        if (subroutineInfo.returnType() != null &&
+            !subroutineInfo.returnType().compatible(returnType)) {
+            raise("Return type (%s) must match subroutine type (%s)"
                           .formatted(returnType, subroutineInfo.returnType()), ctx);
         }
         return returnType;
@@ -309,9 +338,12 @@ public class CompilerVisitor
                 op = (TerminalNode) ctx.getChild(i);
             } else {
                 Type type = visitComparison((JackParser.ComparisonContext) ctx.getChild(i));
+                if (type == null) {
+                    raise("An equality element must have a type", ctx);
+                }
                 if (op != null) {
-                    if (!Objects.equals(previousType, type)) {
-                        raise("Types must match : %s; %s".formatted(previousType, type), ctx);
+                    if (!type.compatible(previousType)) {
+                        warn("Possible incompatible types : %s; %s".formatted(previousType, type), ctx);
                     }
                     vmWriter.writeArithmetic(Command.EQ);
                     if (op.getSymbol().getType() == JackParser.UNEQUAL) {
@@ -323,7 +355,8 @@ public class CompilerVisitor
             }
         }
 
-        return childCount == 1 ? requireNonNull(previousType) : PrimitiveType.BOOLEAN;
+        requireNonNull(previousType);
+        return childCount == 1 ? previousType : PrimitiveType.BOOLEAN;
     }
 
     @Override
@@ -337,9 +370,12 @@ public class CompilerVisitor
                 op = (TerminalNode) ctx.getChild(i);
             } else {
                 Type type = visitTerm((JackParser.TermContext) ctx.getChild(i));
+                if (type == null) {
+                    raise("A comparison element must have a type", ctx);
+                }
                 if (op != null) {
-                    if (!Objects.equals(previousType, type) ||
-                        !(PrimitiveType.INT.equals(type) || PrimitiveType.CHAR.equals(type))) {
+                    if (!PrimitiveType.INT.compatible(type) ||
+                        !PrimitiveType.INT.compatible(previousType)) {
                         raise("Types must match and be either int or char: %s; %s"
                                       .formatted(previousType, type), ctx);
                     }
@@ -359,6 +395,7 @@ public class CompilerVisitor
                 previousType = type;
             }
         }
+        requireNonNull(previousType);
         return childCount == 1 ? previousType : PrimitiveType.BOOLEAN;
     }
 
@@ -373,9 +410,13 @@ public class CompilerVisitor
                 op = (TerminalNode) ctx.getChild(i);
             } else {
                 Type type = visitFactor((JackParser.FactorContext) ctx.getChild(i));
+                if (type == null) {
+                    raise("A term element must have a type", ctx);
+                }
                 if (op != null) {
-                    if (!Objects.equals(previousType, type) || !PrimitiveType.INT.equals(type)) {
-                        raise("Types must match : %s; %s".formatted(previousType, type), ctx);
+                    if (!PrimitiveType.INT.compatible(type) ||
+                        !PrimitiveType.INT.compatible(previousType)) {
+                        raise("Types must be compatible with int : %s; %s".formatted(previousType, type), ctx);
                     }
                     switch (op.getSymbol().getType()) {
                         case JackParser.MINUS -> vmWriter.writeArithmetic(Command.SUB);
@@ -388,6 +429,7 @@ public class CompilerVisitor
                 previousType = type;
             }
         }
+        requireNonNull(previousType);
         return previousType;
     }
 
@@ -402,9 +444,13 @@ public class CompilerVisitor
                 op = (TerminalNode) ctx.getChild(i);
             } else {
                 Type type = visitUnary((JackParser.UnaryContext) ctx.getChild(i));
+                if (type == null) {
+                    raise("A factor element must have a type", ctx);
+                }
                 if (op != null) {
-                    if (!Objects.equals(previousType, type) || !PrimitiveType.INT.equals(type)) {
-                        raise("Types must match : %s; %s".formatted(previousType, type), ctx);
+                    if (!PrimitiveType.INT.compatible(type) ||
+                        !PrimitiveType.INT.compatible(previousType)) {
+                        raise("Types must be compatible with int : %s; %s".formatted(previousType, type), ctx);
                     }
                     switch (op.getSymbol().getType()) {
                         case JackParser.DIV -> vmWriter.writeCall("Math.divide", 2);
@@ -417,18 +463,27 @@ public class CompilerVisitor
                 previousType = type;
             }
         }
-        return previousType;
+        return requireNonNull(previousType);
     }
 
     @Override
     public Type visitUnary(JackParser.UnaryContext ctx)
     {
+        Type type = visitChildren(ctx);
+        if (type == null) {
+            raise("An unary element must have a type", ctx);
+        }
         if (ctx.MINUS() != null) {
+            if (!PrimitiveType.INT.compatible(type)) {
+                raise("Can only negate ints", ctx);
+            }
             vmWriter.writeArithmetic(Command.NEG);
         } else if (ctx.NOT() != null) {
-            vmWriter.writeArithmetic(Command.NOT);
+            if (!PrimitiveType.BOOLEAN.compatible(type)) {
+                vmWriter.writeArithmetic(Command.NOT);
+            }
         }
-        return visitChildren(ctx);
+        return type;
     }
 
     @Override
@@ -436,14 +491,13 @@ public class CompilerVisitor
     {
         if (ctx.expression() != null) {
             return visitExpression(ctx.expression());
+        } else if (ctx.subroutineCall() != null) {
+            return visitSubroutineCall(ctx.subroutineCall());
+        } else if (ctx.arrayReferencing() != null) {
+            return visitArrayReferencing(ctx.arrayReferencing());
         } else if (ctx.ID() != null) {
-            VarInfo varInfo = getVarInfo(ctx.getParent(), ctx.ID().getText());
-            switch (varInfo.scope()) {
-                case STATIC -> vmWriter.writePush(Segment.STATIC, varInfo.order());
-                case FIELD -> vmWriter.writePush(Segment.THIS, varInfo.order());
-                case PARAMETER -> vmWriter.writePush(Segment.ARGUMENT, varInfo.order());
-                case LOCAL -> vmWriter.writePush(Segment.LOCAL, varInfo.order());
-            }
+            VarInfo varInfo = getVarInfo(ctx, ctx.ID().getText());
+            vmWriter.writePush(varInfo.scope().segment, varInfo.order());
             return varInfo.type();
         } else if (ctx.NUMBER() != null) {
             vmWriter.writePush(Segment.CONSTANT, Integer.parseInt(ctx.NUMBER().getText()));
@@ -456,7 +510,7 @@ public class CompilerVisitor
                 vmWriter.writePush(Segment.CONSTANT, text.charAt(i));
                 vmWriter.writeCall("String.append", 2); // this und char
             }
-            return new UserType("String");
+            return Type.of("String");
         } else if (ctx.TRUE() != null) {
             // TRUE ist -1
             vmWriter.writePush(Segment.CONSTANT, 0);
@@ -475,11 +529,34 @@ public class CompilerVisitor
                 raise("this can only be used in method", ctx);
             }
             vmWriter.writePush(Segment.ARGUMENT, 0);
-            return new UserType(classInfo.name());
+            return Type.of(classInfo.name());
         }
 
         raise("Unknown primary", ctx);
         return null;
+    }
+
+    @Override
+    public Type visitArrayReferencing(JackParser.ArrayReferencingContext ctx) {
+
+        String varName = ctx.ID().getText();
+        VarInfo varInfo = getVarInfo(ctx, varName);
+        if (varInfo.type() != Array.INSTANCE) {
+            raise("%s must be of type Array".formatted(varInfo), ctx);
+        }
+        vmWriter.writePush(varInfo.scope().segment, varInfo.order());
+        Type idxType = visitExpression(ctx.expression());
+        if (!PrimitiveType.INT.compatible(idxType)) {
+            raise("expression must resolve to int type", ctx);
+        }
+        // expression is now on stack
+        // calculate address of array element
+        vmWriter.writeArithmetic(Command.ADD);
+        // setup that with address
+        vmWriter.writePop(Segment.POINTER, 1);
+        // put content of THAT 0
+        vmWriter.writePush(Segment.THAT, 0);
+        return PrimitiveType.INT;
     }
 
     @NotNull

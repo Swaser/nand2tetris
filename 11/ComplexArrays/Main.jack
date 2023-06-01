@@ -24,7 +24,7 @@ class Main {
         let a[b[a[3]]] = a[a[5]] * b[((7 - a[3]) - Main.double(2)) + 1];  // a[5] = 8 * 5 = 40
         let c[0] = null;
         let c = c[0];
-        
+
         do Output.printString("Test 1: expected result: 5; actual result: ");
         do Output.printInt(b[2]);
         do Output.println();
@@ -37,7 +37,7 @@ class Main {
         
         let c = null;
 
-        if (c = null) {
+        if (c == null) {
             do Main.fill(a, 10);
             let c = a[3];
             let c[1] = 33;

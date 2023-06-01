@@ -42,7 +42,9 @@ statement : letStatement
           | returnStatement
           ;
 
-letStatement : 'let' ID '=' expression ';';
+letStatement : assignArray | assignVariable;
+assignVariable : 'let' ID '=' expression ';';
+assignArray : 'let' ID '[' expression ']' '=' expression ';';
 
 ifStatement : 'if' '(' expression ')' block ('else' (ifStatement|block))? ;
 
@@ -64,6 +66,8 @@ unary   : ('!'|'-') unary
         ;
 
 primary : '(' expression ')'
+        | arrayReferencing
+        | subroutineCall
         | ID
         | NUMBER
         | STRING
@@ -72,6 +76,8 @@ primary : '(' expression ')'
         | 'null'
         | 'this'
         ;
+
+arrayReferencing : ID '[' expression ']';
 
 subroutineCall : callLocal | callRemote;
 

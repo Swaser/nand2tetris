@@ -1,8 +1,7 @@
 package ch.chassaing.jack.lang.type;
 
-/**
- * Ein Typ, der bei equals immer true zurück gibt
- */
+import org.jetbrains.annotations.Nullable;
+
 public final class UnknownType
     implements Type
 {
@@ -11,20 +10,8 @@ public final class UnknownType
     private UnknownType() {}
 
     @Override
-    public String repr()
-    {
-        return "unknown";
-    }
+    public boolean compatible(@Nullable Type other) {
 
-    @Override
-    public boolean equals(Object obj)
-    {
-        return obj != null && Type.class.isAssignableFrom(obj.getClass());
-    }
-
-    @Override
-    public int hashCode()
-    {
-        return -1;
+        return true;
     }
 }

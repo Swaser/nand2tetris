@@ -3,19 +3,18 @@ package ch.chassaing.jack.lang.type;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public final class UserType
+public final class Array
         implements Type {
-    private final String name;
 
-    UserType(@NotNull String name) {this.name = name;}
+    public static final Array INSTANCE = new Array();
 
-    @NotNull
-    public String name() {return name;}
+    private Array() {}
 
     @Override
     public boolean compatible(@Nullable Type other) {
 
         return UnknownType.INSTANCE == other ||
-               (other instanceof UserType otherTyped && otherTyped.name.equals(this.name));
+               Array.INSTANCE == other ||
+               PrimitiveType.INT == other; // this stupid lang allows assigning any base address to an Array type
     }
 }
