@@ -26,9 +26,16 @@ class Main {
      */
     function void main() {
 	    var int value;
-        do Main.fillMemory(8001, 16, -1); // sets RAM[8001]..RAM[8016] to -1
-        let value = Memory.peek(8000);    // reads a value from RAM[8000]
-        do Main.convert(value);           // performs the conversion
+	    var String message;
+	    let message = "Give a number? ";
+	    let value = Keyboard.readInt(message);
+	    while (value != 0) {
+            do Main.fillMemory(8001, 16, -1); // sets RAM[8001]..RAM[8016] to -1
+            //let value = Memory.peek(8000);    // reads a value from RAM[8000]
+	        do Main.fillMemory(8000, 1, value);
+            do Main.convert(value);           // performs the conversion
+            let value = Keyboard.readInt(message);
+        }
         return;
     }
     
@@ -43,9 +50,9 @@ class Main {
     	    let position = position + 1;
     	    let mask = Main.nextMask(mask);
     	
-    	    if (~(position > 16)) {
+    	    if (!(position > 16)) {
     	
-    	        if (~((value & mask) = 0)) {
+    	        if (!(value & mask == 0)) {
     	            do Memory.poke(8000 + position, 1);
        	        }
     	        else {
@@ -61,7 +68,7 @@ class Main {
  
     /** Returns the next mask (the mask that should follow the given mask). */
     function int nextMask(int mask) {
-    	if (mask = 0) {
+    	if (mask == 0) {
     	    return 1;
     	}
     	else {

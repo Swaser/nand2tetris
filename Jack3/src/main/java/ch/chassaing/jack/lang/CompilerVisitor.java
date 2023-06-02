@@ -8,9 +8,6 @@ import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.TerminalNode;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.EnumSet;
-import java.util.Objects;
-
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -216,36 +213,34 @@ public class CompilerVisitor
     @Override
     public Type visitAssignArray(JackParser.AssignArrayContext ctx) {
 
+        /*
+         * We first evaluate the right hand side of the assignment. This way
+         * we don't need to store the right hand side in a temp as is
+         * suggested in the book. This is possible, because we are using an AST.
+         */
+
         String varName = ctx.ID().getText();
         VarInfo varInfo = getVarInfo(ctx, varName);
         if (varInfo.type() != Array.INSTANCE) {
             raise("%s must be of type Array".formatted(varInfo), ctx);
         }
+
+        // an Array is not (yet) typed, thus we don't care about the expression(1) type
+        visitExpression(ctx.expression(1));
+
         vmWriter.writePush(varInfo.scope().segment, varInfo.order());
         Type idxType = visitExpression(ctx.expression(0));
         if (!PrimitiveType.INT.compatible(idxType)) {
             raise("expression must resolve to int type", ctx);
         }
-        // expression is now on stack
-        // calculate address of array element
         vmWriter.writeArithmetic(Command.ADD);
-        // address is now on stack
 
-        Type expressionType = visitExpression(ctx.expression(1));
-        if (!PrimitiveType.INT.compatible(expressionType)) {
-            raise("Expression type (%s) is not compatible with Array"
-                          .formatted(expressionType), ctx);
-        }
-
-        // here a swap the two top stack elements would be convenient
-
-        // now save expression in temp 0
-        vmWriter.writePop(Segment.TEMP, 0);
-        // address to that
+        // pop the address to THAT
         vmWriter.writePop(Segment.POINTER, 1);
 
-        vmWriter.writePush(Segment.TEMP, 0);
+        // now pop expression(1) to THAT 0
         vmWriter.writePop(Segment.THAT, 0);
+
         return null;
     }
 
@@ -454,7 +449,7 @@ public class CompilerVisitor
                     }
                     switch (op.getSymbol().getType()) {
                         case JackParser.DIV -> vmWriter.writeCall("Math.divide", 2);
-                        case JackParser.MULT -> vmWriter.writeCall("Math.multipy", 2);
+                        case JackParser.MULT -> vmWriter.writeCall("Math.multiply", 2);
                         case JackParser.AND -> vmWriter.writeArithmetic(Command.AND);
                         default -> raise("Unknown symbol " + op, ctx);
                     }
@@ -503,12 +498,14 @@ public class CompilerVisitor
             vmWriter.writePush(Segment.CONSTANT, Integer.parseInt(ctx.NUMBER().getText()));
             return PrimitiveType.INT;
         } else if (ctx.STRING() != null) {
-            vmWriter.writeCall("String.new", 0); // neuer String auf dem Stack
             String text = ctx.STRING().getText();
+            // maxlength ist länge des texts
+            vmWriter.writePush(Segment.CONSTANT, text.length());
+            vmWriter.writeCall("String.new", 1); // neuer String auf dem Stack
             for (int i = 1; i < text.length() - 1; i++) {
                 // THIS sollte auf dem Stack bleiben
                 vmWriter.writePush(Segment.CONSTANT, text.charAt(i));
-                vmWriter.writeCall("String.append", 2); // this und char
+                vmWriter.writeCall("String.appendChar", 2); // this und char
             }
             return Type.of("String");
         } else if (ctx.TRUE() != null) {
@@ -556,7 +553,7 @@ public class CompilerVisitor
         vmWriter.writePop(Segment.POINTER, 1);
         // put content of THAT 0
         vmWriter.writePush(Segment.THAT, 0);
-        return PrimitiveType.INT;
+        return UnknownType.INSTANCE;
     }
 
     @NotNull

@@ -72,7 +72,7 @@ public class GenericWriter implements VMWriter
     @Override
     public void writeLabel(String name)
     {
-        write("(%s)%n".formatted(name));
+        write("label %s%n".formatted(name));
     }
 
     @Override

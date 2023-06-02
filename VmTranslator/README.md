@@ -1,28 +1,30 @@
 # VM Translator
 
+
+
 ## VM Specification
 
-1. There are no statements or expressions outside of functions. 
-2. Every function call must return a value. If a function has the 
-`void` return type, then the compiler must add a `push constant 0` to
-add a value to the stack to be returned (copied to _*ARG_).
-3. Return values are copied to _*ARG_ and the stack pointer is set to
-ARG+1 (so the last value on the stack is the return value). The return
-value must be consumed, either by assigning it to a segment, or by
-dropping it from the stack.
-4. The starting function must not return. For syntactic reasons it will
-need a return statement, but that statement must not be reached. Therefore
+1. No code outside of functions.
+2. Every function call must return a value. It's the compilers job
+to make sure that functions that do not return a value will return one 
+(_push const 0_).
+3. Upon return the return value is popped to _ARG 0_. The other registers
+are restored and the stack pointer is set to _*ARG + 1_
+4. The return value is normally consumed through a _pop_ command. This should
+be ensured by the compiler.
+5. The starting function must not return. For syntactic reasons it will
+need a return statement, but that statement must not be reached. Therefore,
 an endless loop must be inserted into the code just before the return.
-
-### Explanations
-About 3.: Return values are stored in *ARG. But what about functions
-that have zero arguments but still return a value? We could try to 
-handle all these different cases. Or we can handle them all the same.
+6. Static variables are special: If the argument to _push/pop static_ is 
+alphanumeric, then this is to be the name of the static variable. If it is
+numeric only, then the name of the variable should be _filename.number_. 
+This is to work around a quirk of the Jack platform which aims to simplify
+the exercises.
 
 
 ## Planned Changes to the VM Specification
 
 1. Allow `push static <name>` and `pop static <name>`.
 2. Add instruction to drop a value from the stack `drop`. This is more important
-than the dual operation of increasing the stack pointer without acutally pushing
+than the dual operation of increasing the stack pointer without actually pushing
 something to the stack.

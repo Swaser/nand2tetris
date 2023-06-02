@@ -15,17 +15,20 @@ public final class SlurpingParser
         implements Parser
 {
     private final ArrayList<String> lines;
+    private final String filenameStub;
     private int currentLine = 0;
     private String[] fields;
 
     public SlurpingParser(File file)
     {
+        String filename = file.getName();
+        filenameStub = filename.replace(".vm", "");
         lines = new ArrayList<>();
         try (InputStream is = IOUtils.toBufferedInputStream(new FileInputStream(file))) {
             lines.addAll(IOUtils.readLines(is, StandardCharsets.UTF_8));
         }
         catch (IOException e) {
-            System.err.println("Problem reading file " + file.getName());
+            System.err.println("Problem reading file " + filename);
             e.printStackTrace();
             System.exit(2);
         }
@@ -52,7 +55,11 @@ public final class SlurpingParser
             case "push" -> {
                 String segmentName = fields[1].toUpperCase();
                 if ("STATIC".equals(segmentName)) {
-                    yield new PushS(currentLine, fields[2]);
+                    String arg = fields[2];
+                    if (StringUtils.isNumeric(arg)) {
+                        arg = filenameStub + "." + arg;
+                    }
+                    yield new PushS(currentLine, arg);
                 } else {
                     yield new Push(currentLine,
                                    Segment.valueOf(segmentName),
@@ -62,7 +69,11 @@ public final class SlurpingParser
             case "pop" -> {
                 String segmentName = fields[1].toUpperCase();
                 if ("STATIC".equals(segmentName)) {
-                    yield new PopS(currentLine, fields[2]);
+                    String arg = fields[2];
+                    if (StringUtils.isNumeric(arg)) {
+                        arg = filenameStub + "." + arg;
+                    }
+                    yield new PopS(currentLine, arg);
                 } else {
                     yield new Pop(currentLine,
                                   Segment.valueOf(segmentName),
