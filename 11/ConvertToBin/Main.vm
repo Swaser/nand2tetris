@@ -35,13 +35,13 @@ pop local 1
 push local 1
 call Keyboard.readInt 1
 pop local 0
-label Main.main_0
+label Main.main$0
 push local 0
 push constant 0
 eq
 not
 not
-if-goto Main.main_1
+if-goto Main.main$1
 push constant 8001
 push constant 16
 push constant 1
@@ -59,18 +59,18 @@ pop temp 0
 push local 1
 call Keyboard.readInt 1
 pop local 0
-goto Main.main_0
-label Main.main_1
+goto Main.main$0
+label Main.main$1
 push constant 0
 return
 function Main.convert 3
 push constant 0
 not
 pop local 2
-label Main.convert_0
+label Main.convert$0
 push local 2
 not
-if-goto Main.convert_1
+if-goto Main.convert$1
 push local 1
 push constant 1
 add
@@ -82,36 +82,38 @@ push local 1
 push constant 16
 gt
 not
-if-goto Main.convert_2
+not
+if-goto Main.convert$2
 push argument 0
 push local 0
 and
 push constant 0
 eq
 not
-if-goto Main.convert_4
+not
+if-goto Main.convert$4
 push constant 8000
 push local 1
 add
 push constant 1
 call Memory.poke 2
 pop temp 0
-goto Main.convert_5
-label Main.convert_4
+goto Main.convert$5
+label Main.convert$4
 push constant 8000
 push local 1
 add
 push constant 0
 call Memory.poke 2
 pop temp 0
-label Main.convert_5
-goto Main.convert_3
-label Main.convert_2
+label Main.convert$5
+goto Main.convert$3
+label Main.convert$2
 push constant 0
 pop local 2
-label Main.convert_3
-goto Main.convert_0
-label Main.convert_1
+label Main.convert$3
+goto Main.convert$0
+label Main.convert$1
 push constant 0
 return
 function Main.nextMask 0
@@ -119,23 +121,23 @@ push argument 0
 push constant 0
 eq
 not
-if-goto Main.nextMask_0
+if-goto Main.nextMask$0
 push constant 1
 return
-goto Main.nextMask_1
-label Main.nextMask_0
+goto Main.nextMask$1
+label Main.nextMask$0
 push argument 0
 push constant 2
 call Math.multiply 2
 return
-label Main.nextMask_1
+label Main.nextMask$1
 function Main.fillMemory 0
-label Main.fillMemory_0
+label Main.fillMemory$0
 push argument 1
 push constant 0
 gt
 not
-if-goto Main.fillMemory_1
+if-goto Main.fillMemory$1
 push argument 0
 push argument 2
 call Memory.poke 2
@@ -148,7 +150,7 @@ push argument 0
 push constant 1
 add
 pop argument 0
-goto Main.fillMemory_0
-label Main.fillMemory_1
+goto Main.fillMemory$0
+label Main.fillMemory$1
 push constant 0
 return

@@ -93,7 +93,7 @@ public final class SubroutineInfo
 
     public String nextLabel()
     {
-        return "%s_%d".formatted(fullName(), labelNo++);
+        return "%s$%d".formatted(fullName(), labelNo++);
     }
 
     @NotNull

@@ -39,10 +39,10 @@ class SquareGame {
 
    /** Moves the square in the current direction. */
    method void moveSquare() {
-      if (direction = 1) { do square.moveUp(); }
-      if (direction = 2) { do square.moveDown(); }
-      if (direction = 3) { do square.moveLeft(); }
-      if (direction = 4) { do square.moveRight(); }
+      if (direction == 1) { do square.moveUp(); }
+      if (direction == 2) { do square.moveDown(); }
+      if (direction == 3) { do square.moveLeft(); }
+      if (direction == 4) { do square.moveRight(); }
       do Sys.wait(5);  // delays the next movement
       return;
    }
@@ -53,22 +53,22 @@ class SquareGame {
       var boolean exit;
       let exit = false;
       
-      while (~exit) {
+      while (!exit) {
          // waits for a key to be pressed
-         while (key = 0) {
+         while (key == 0) {
             let key = Keyboard.keyPressed();
             do moveSquare();
          }
-         if (key = 81)  { let exit = true; }     // q key
-         if (key = 90)  { do square.decSize(); } // z key
-         if (key = 88)  { do square.incSize(); } // x key
-         if (key = 131) { let direction = 1; }   // up arrow
-         if (key = 133) { let direction = 2; }   // down arrow
-         if (key = 130) { let direction = 3; }   // left arrow
-         if (key = 132) { let direction = 4; }   // right arrow
+         if (key == 81)  { let exit = true; }     // q key
+         if (key == 90)  { do square.decSize(); } // z key
+         if (key == 88)  { do square.incSize(); } // x key
+         if (key == 131) { let direction = 1; }   // up arrow
+         if (key == 133) { let direction = 2; }   // down arrow
+         if (key == 130) { let direction = 3; }   // left arrow
+         if (key == 132) { let direction = 4; }   // right arrow
 
          // waits for the key to be released
-         while (~(key = 0)) {
+         while (!(key == 0)) {
             let key = Keyboard.keyPressed();
             do moveSquare();
          }

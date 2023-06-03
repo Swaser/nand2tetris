@@ -8,6 +8,9 @@ import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.TerminalNode;
 import org.jetbrains.annotations.NotNull;
 
+import javax.xml.crypto.OctetStreamData;
+import java.util.EnumSet;
+
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -39,7 +42,7 @@ public class CompilerVisitor
     }
 
     private void warn(@NotNull String message,
-                       @NotNull ParserRuleContext ctx)
+                      @NotNull ParserRuleContext ctx)
     {
 
         System.out.println(message + " at " + ctx.getText());
@@ -211,7 +214,8 @@ public class CompilerVisitor
     }
 
     @Override
-    public Type visitAssignArray(JackParser.AssignArrayContext ctx) {
+    public Type visitAssignArray(JackParser.AssignArrayContext ctx)
+    {
 
         /*
          * We first evaluate the right hand side of the assignment. This way
@@ -443,8 +447,11 @@ public class CompilerVisitor
                     raise("A factor element must have a type", ctx);
                 }
                 if (op != null) {
-                    if (!PrimitiveType.INT.compatible(type) ||
-                        !PrimitiveType.INT.compatible(previousType)) {
+                    if (op.getSymbol().getType() == JackParser.AND) {
+                        if (!PrimitiveType.BOOLEAN.compatible(type) || !PrimitiveType.BOOLEAN.compatible(previousType)) {
+                            raise("Types must be boolean for &", ctx);
+                        }
+                    } else if (!PrimitiveType.INT.compatible(type) || !PrimitiveType.INT.compatible(previousType)) {
                         raise("Types must be compatible with int : %s; %s".formatted(previousType, type), ctx);
                     }
                     switch (op.getSymbol().getType()) {
@@ -475,8 +482,9 @@ public class CompilerVisitor
             vmWriter.writeArithmetic(Command.NEG);
         } else if (ctx.NOT() != null) {
             if (!PrimitiveType.BOOLEAN.compatible(type)) {
-                vmWriter.writeArithmetic(Command.NOT);
+                raise("Must be boolean", ctx);
             }
+            vmWriter.writeArithmetic(Command.NOT);
         }
         return type;
     }
@@ -522,7 +530,7 @@ public class CompilerVisitor
             vmWriter.writePush(Segment.CONSTANT, 0);
             return UnknownType.INSTANCE;
         } else if (ctx.THIS() != null) {
-            if (subroutineInfo.scope() != SubroutineScope.METHOD) {
+            if (!subroutineInfo.scope().callFromLocal()) {
                 raise("this can only be used in method", ctx);
             }
             vmWriter.writePush(Segment.ARGUMENT, 0);
@@ -534,7 +542,8 @@ public class CompilerVisitor
     }
 
     @Override
-    public Type visitArrayReferencing(JackParser.ArrayReferencingContext ctx) {
+    public Type visitArrayReferencing(JackParser.ArrayReferencingContext ctx)
+    {
 
         String varName = ctx.ID().getText();
         VarInfo varInfo = getVarInfo(ctx, varName);
@@ -571,7 +580,7 @@ public class CompilerVisitor
     @Override
     public Type visitCallLocal(JackParser.CallLocalContext ctx)
     {
-        if (subroutineInfo.scope() != SubroutineScope.METHOD) {
+        if (!subroutineInfo.scope().callFromLocal()) {
             raise("local calls can only be made from other methods", ctx);
         }
         String name = ctx.ID().getText();
