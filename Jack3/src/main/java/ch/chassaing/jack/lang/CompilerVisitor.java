@@ -112,7 +112,7 @@ public class CompilerVisitor
         vmWriter.writeFunction(subroutineInfo.fullName(),
                                subroutineInfo.numberOfLocalVars());
 
-        // set up this
+        // set up this for methods and constructors
         if (scope == SubroutineScope.METHOD) {
             vmWriter.writePush(Segment.ARGUMENT, 0);
             vmWriter.writePop(Segment.POINTER, 0);
@@ -122,7 +122,7 @@ public class CompilerVisitor
                 raise("Constructor in class without fields", ctx);
             }
             vmWriter.writePush(Segment.CONSTANT, numberOfFields);
-            vmWriter.writeCall("Memory.alloc", numberOfFields);
+            vmWriter.writeCall("Memory.alloc", 1);
             vmWriter.writePop(Segment.POINTER, 0);
         }
 
@@ -533,7 +533,7 @@ public class CompilerVisitor
             if (!subroutineInfo.scope().callFromLocal()) {
                 raise("this can only be used in method", ctx);
             }
-            vmWriter.writePush(Segment.ARGUMENT, 0);
+            vmWriter.writePush(Segment.POINTER, 0);
             return Type.of(classInfo.name());
         }
 
@@ -576,7 +576,6 @@ public class CompilerVisitor
         return varInfo;
     }
 
-    /* Muss Methode sein und kann nur von Methode aus aufgerufen werden */
     @Override
     public Type visitCallLocal(JackParser.CallLocalContext ctx)
     {
@@ -585,7 +584,7 @@ public class CompilerVisitor
         }
         String name = ctx.ID().getText();
         int nArgs = ctx.expressionList().expression().size();
-        vmWriter.writePush(Segment.ARGUMENT, 0); // Adresse des Objekts auf den Stack
+        vmWriter.writePush(Segment.POINTER, 0); // THIS onto the stack
         visitExpressionList(ctx.expressionList());
         vmWriter.writeCall(classInfo.name() + "." + name, nArgs + 1);
         return UnknownType.INSTANCE;
@@ -623,11 +622,6 @@ public class CompilerVisitor
             vmWriter.writeCall(((UserType) var.type()).name() + "." + fun, nArgs + 1);
         } else {
             // Muss Funktion oder Konstruktor sein
-            if (nArgs == 0) {
-                // Platz schaffen für return Wert
-                vmWriter.writePush(Segment.CONSTANT, 0);
-                nArgs = 1;
-            }
             visitExpressionList(ctx.expressionList());
             vmWriter.writeCall(other + "." + fun, nArgs);
         }
