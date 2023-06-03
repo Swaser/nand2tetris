@@ -414,8 +414,11 @@ public class CompilerVisitor
                 }
                 if (op != null) {
                     if (op.getSymbol().getType() == JackParser.OR) {
-                        if (!PrimitiveType.BOOLEAN.compatible(type) || !PrimitiveType.BOOLEAN.compatible(previousType)) {
-                            raise("Types must be boolean for &", ctx);
+                        // types must not be UserType and should be compatible
+                        if (type instanceof UserType || previousType instanceof UserType) {
+                            raise("OR not permitted with user types", ctx);
+                        } else if (!type.compatible(previousType)) {
+                            raise("Types must be compatible for OR", ctx);
                         }
                     } else if (!PrimitiveType.INT.compatible(type) || !PrimitiveType.INT.compatible(previousType)) {
                         raise("Types must be compatible with int : %s; %s".formatted(previousType, type), ctx);
@@ -451,8 +454,11 @@ public class CompilerVisitor
                 }
                 if (op != null) {
                     if (op.getSymbol().getType() == JackParser.AND) {
-                        if (!PrimitiveType.BOOLEAN.compatible(type) || !PrimitiveType.BOOLEAN.compatible(previousType)) {
-                            raise("Types must be boolean for &", ctx);
+                        // types must not be UserType and should be compatible
+                        if (type instanceof UserType || previousType instanceof UserType) {
+                            raise("AND not permitted with user types", ctx);
+                        } else if (!type.compatible(previousType)) {
+                            raise("Types must be compatible for AND", ctx);
                         }
                     } else if (!PrimitiveType.INT.compatible(type) || !PrimitiveType.INT.compatible(previousType)) {
                         raise("Types must be compatible with int : %s; %s".formatted(previousType, type), ctx);
