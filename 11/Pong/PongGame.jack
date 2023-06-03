@@ -62,25 +62,25 @@ class PongGame {
     method void run() {
         var char key;
 
-        while (~exit) {
+        while (!exit) {
             // waits for a key to be pressed.
-            while ((key = 0) & (~exit)) {
+            while ((key == 0) & (!exit)) {
                 let key = Keyboard.keyPressed();
                 do bat.move();
                 do moveBall();
                 do Sys.wait(50);
             }
 
-            if (key = 130) { do bat.setDirection(1); }
+            if (key == 130) { do bat.setDirection(1); }
 	        else {
-	            if (key = 132) { do bat.setDirection(2); }
+	            if (key == 132) { do bat.setDirection(2); }
 		        else {
-                    if (key = 140) { let exit = true; }
+                    if (key == 140) { let exit = true; }
 		        }
             }
 
             // Waits for the key to be released.
-            while ((~(key = 0)) & (~exit)) {
+            while ((!(key == 0)) & (!exit)) {
                 let key = Keyboard.keyPressed();
                 do bat.move();
                 do moveBall();
@@ -107,7 +107,7 @@ class PongGame {
 
         let wall = ball.move();
 
-        if ((wall > 0) & (~(wall = lastWall))) {
+        if ((wall > 0) & (!(wall == lastWall))) {
             let lastWall = wall;
             let bouncingDirection = 0;
             let batLeft = bat.getLeft();
@@ -115,9 +115,9 @@ class PongGame {
             let ballLeft = ball.getLeft();
             let ballRight = ball.getRight();
   
-            if (wall = 4) {
+            if (wall == 4) {
                 let exit = (batLeft > ballRight) | (batRight < ballLeft);
-                if (~exit) {
+                if (!exit) {
                     if (ballRight < (batLeft + 10)) { let bouncingDirection = -1; }
                     else {
                         if (ballLeft > (batRight - 10)) { let bouncingDirection = 1; }

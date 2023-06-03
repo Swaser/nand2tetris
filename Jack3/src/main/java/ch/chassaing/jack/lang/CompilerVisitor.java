@@ -413,8 +413,11 @@ public class CompilerVisitor
                     raise("A term element must have a type", ctx);
                 }
                 if (op != null) {
-                    if (!PrimitiveType.INT.compatible(type) ||
-                        !PrimitiveType.INT.compatible(previousType)) {
+                    if (op.getSymbol().getType() == JackParser.OR) {
+                        if (!PrimitiveType.BOOLEAN.compatible(type) || !PrimitiveType.BOOLEAN.compatible(previousType)) {
+                            raise("Types must be boolean for &", ctx);
+                        }
+                    } else if (!PrimitiveType.INT.compatible(type) || !PrimitiveType.INT.compatible(previousType)) {
                         raise("Types must be compatible with int : %s; %s".formatted(previousType, type), ctx);
                     }
                     switch (op.getSymbol().getType()) {

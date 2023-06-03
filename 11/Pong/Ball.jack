@@ -131,19 +131,19 @@ class Ball {
             else { let x = x - 4; }
 	    }
 
-	    if (~(x > leftWall)) {
+	    if (!(x > leftWall)) {
 	        let wall = 1;    
 	        let x = leftWall;
 	    }
-        if (~(x < rightWall)) {
+        if (!(x < rightWall)) {
 	        let wall = 2;    
 	        let x = rightWall;
 	    }
-        if (~(y > topWall)) {
+        if (!(y > topWall)) {
             let wall = 3;    
 	        let y = topWall;
         }
-        if (~(y < bottomWall)) {
+        if (!(y < bottomWall)) {
             let wall = 4;    
 	        let y = bottomWall;
         }
@@ -164,27 +164,27 @@ class Ball {
 	    // dividing by 10 first since results are too big
         let divLengthx = lengthx / 10;
         let divLengthy = lengthy / 10;
-	    if (bouncingDirection = 0) { let factor = 10; }
+	    if (bouncingDirection == 0) { let factor = 10; }
 	    else {
-	        if (((~(lengthx < 0)) & (bouncingDirection = 1)) | ((lengthx < 0) & (bouncingDirection = (-1)))) {
+	        if (((!(lengthx < 0)) & (bouncingDirection == 1)) | ((lengthx < 0) & (bouncingDirection == (-1)))) {
                 let factor = 20; // bounce direction is in ball direction
             }
 	        else { let factor = 5; } // bounce direction is against ball direction
 	    }
 
-	    if (wall = 1) {
+	    if (wall == 1) {
 	        let newx = 506;
 	        let newy = (divLengthy * (-50)) / divLengthx;
             let newy = y + (newy * factor);
 	    }
         else {
-            if (wall = 2) {
+            if (wall == 2) {
                 let newx = 0;
                 let newy = (divLengthy * 50) / divLengthx;
                 let newy = y + (newy * factor);
 	        }
 	        else {
-                if (wall = 3) {
+                if (wall == 3) {
 		            let newy = 250;
 		            let newx = (divLengthx * (-25)) / divLengthy;
                     let newx = x + (newx * factor);
