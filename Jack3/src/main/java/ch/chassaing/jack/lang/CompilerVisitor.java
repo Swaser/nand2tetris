@@ -8,16 +8,13 @@ import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.TerminalNode;
 import org.jetbrains.annotations.NotNull;
 
-import javax.xml.crypto.OctetStreamData;
-import java.util.EnumSet;
-
 import static java.util.Objects.requireNonNull;
 
 /**
  * One per class
  */
 public class CompilerVisitor
-        extends JackBaseVisitor<Type>
+        extends JackBaseVisitor<Object>
 {
     private final VMWriter vmWriter;
 
@@ -199,11 +196,11 @@ public class CompilerVisitor
     }
 
     @Override
-    public Type visitAssignVariable(JackParser.AssignVariableContext ctx)
+    public Object visitAssignVariable(JackParser.AssignVariableContext ctx)
     {
-        VarInfo varInfo = getVarInfo(ctx, ctx.ID().getText());
-        @NotNull Type varType = varInfo.type();
-        Type expressionType = visitExpression(ctx.expression());
+        VarInfo varInfo = visitVarUse(ctx.varUse());
+        Type varType = varInfo.type();
+        Type expressionType = (Type) visitExpression(ctx.expression());
 
         if (!varType.compatible(expressionType)) {
             raise("Expression type (%s) is not of the variable type (%s)"
@@ -214,17 +211,14 @@ public class CompilerVisitor
     }
 
     @Override
-    public Type visitAssignArray(JackParser.AssignArrayContext ctx)
+    public Object visitAssignArray(JackParser.AssignArrayContext ctx)
     {
-
         /*
          * We first evaluate the right hand side of the assignment. This way
          * we don't need to store the right hand side in a temp as is
          * suggested in the book. This is possible, because we are using an AST.
          */
-
-        String varName = ctx.ID().getText();
-        VarInfo varInfo = getVarInfo(ctx, varName);
+        VarInfo varInfo = visitVarUse(ctx.varUse());
         if (varInfo.type() != Array.INSTANCE) {
             raise("%s must be of type Array".formatted(varInfo), ctx);
         }
@@ -233,7 +227,7 @@ public class CompilerVisitor
         visitExpression(ctx.expression(1));
 
         vmWriter.writePush(varInfo.scope().segment, varInfo.order());
-        Type idxType = visitExpression(ctx.expression(0));
+        Type idxType = (Type) visitExpression(ctx.expression(0));
         if (!PrimitiveType.INT.compatible(idxType)) {
             raise("expression must resolve to int type", ctx);
         }
@@ -253,7 +247,7 @@ public class CompilerVisitor
     {
         String elseLabel = subroutineInfo.nextLabel();
         String afterLabel = subroutineInfo.nextLabel();
-        Type expressionType = visitExpression(ctx.expression());
+        Type expressionType = (Type) visitExpression(ctx.expression());
         if (PrimitiveType.BOOLEAN != expressionType) {
             raise("Expression in if must be boolean", ctx);
         }
@@ -281,7 +275,7 @@ public class CompilerVisitor
         String afterLabel = subroutineInfo.nextLabel();
 
         vmWriter.writeLabel(whileLabel);
-        Type expressionType = visitExpression(ctx.expression());
+        Type expressionType = (Type)visitExpression(ctx.expression());
         if (PrimitiveType.BOOLEAN != expressionType) {
             raise("Expression in while must be boolean", ctx);
         }
@@ -308,7 +302,7 @@ public class CompilerVisitor
     {
         Type returnType = null;
         if (ctx.expression() != null) {
-            returnType = visitExpression(ctx.expression());
+            returnType = (Type) visitExpression(ctx.expression());
         } else {
             vmWriter.writePush(Segment.CONSTANT, 0);
         }
@@ -480,7 +474,7 @@ public class CompilerVisitor
     @Override
     public Type visitUnary(JackParser.UnaryContext ctx)
     {
-        Type type = visitChildren(ctx);
+        Type type = (Type) visitChildren(ctx);
         if (type == null) {
             raise("An unary element must have a type", ctx);
         }
@@ -502,13 +496,13 @@ public class CompilerVisitor
     public Type visitPrimary(JackParser.PrimaryContext ctx)
     {
         if (ctx.expression() != null) {
-            return visitExpression(ctx.expression());
+            return (Type) visitExpression(ctx.expression());
         } else if (ctx.subroutineCall() != null) {
-            return visitSubroutineCall(ctx.subroutineCall());
+            return (Type) visitSubroutineCall(ctx.subroutineCall());
         } else if (ctx.arrayReferencing() != null) {
             return visitArrayReferencing(ctx.arrayReferencing());
-        } else if (ctx.ID() != null) {
-            VarInfo varInfo = getVarInfo(ctx, ctx.ID().getText());
+        } else if (ctx.varUse() != null) {
+            VarInfo varInfo = visitVarUse(ctx.varUse());
             vmWriter.writePush(varInfo.scope().segment, varInfo.order());
             return varInfo.type();
         } else if (ctx.NUMBER() != null) {
@@ -551,6 +545,25 @@ public class CompilerVisitor
     }
 
     @Override
+    @NotNull
+    public VarInfo visitVarUse(JackParser.VarUseContext ctx)
+    {
+        String varName = ctx.ID().getText();
+        if (ctx.THIS() != null) {
+            VarInfo result = classInfo.findVar(varName);
+            if (result == null) {
+                raise("Field %s not found in %s".formatted(varName, classInfo.name()), ctx);
+            }
+            if (result.scope() != VarScope.FIELD) {
+                raise("Variable accessed with this. must be field", ctx);
+            }
+            return result;
+        }
+
+        return getVarInfo(ctx, varName);
+    }
+
+    @Override
     public Type visitArrayReferencing(JackParser.ArrayReferencingContext ctx)
     {
 
@@ -560,7 +573,7 @@ public class CompilerVisitor
             raise("%s must be of type Array".formatted(varInfo), ctx);
         }
         vmWriter.writePush(varInfo.scope().segment, varInfo.order());
-        Type idxType = visitExpression(ctx.expression());
+        Type idxType = (Type) visitExpression(ctx.expression());
         if (!PrimitiveType.INT.compatible(idxType)) {
             raise("expression must resolve to int type", ctx);
         }

@@ -1,7 +1,11 @@
 # The Grand Plan
 
-* Make Jack into a interpreted language using C
-* Port the interpreter for microcontroller (ARM or RISC-V)
+## Possibilities
+* Make Jack into an interpreted platform using C analog Lox
+* Make Jack into a compiled platform using a C transpiler
+* Port the interpreter platform for microcontroller (ARM or RISC-V)
+* Write a Jack compiler including assembler for microcontroller that
+runs on the microcontroller itself
 * Write a code editor integrated acting like a command line, like C64 Basic
 * Write a compiler for Jack on Microcontroller
 
