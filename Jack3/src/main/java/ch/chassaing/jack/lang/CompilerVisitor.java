@@ -25,12 +25,6 @@ public class CompilerVisitor
 
     public CompilerVisitor(VMWriter vmWriter) {this.vmWriter = vmWriter;}
 
-    public ClassInfo getClassInfo()
-    {
-
-        return classInfo;
-    }
-
     private void raise(@NotNull String message,
                        @NotNull ParserRuleContext ctx)
     {
