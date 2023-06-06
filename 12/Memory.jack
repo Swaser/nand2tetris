@@ -10,28 +10,73 @@
  */ 
 class Memory {
 
+    static Array mem;
+    static int freeRoot;
+    static int allocRoot;
+
     /** Initializes the class. */
     function void init() {
+        let mem = 0;                          // represent the whole memory as an Array
+        let freeRoot = 2048;                  // free memory starts after stack (which goes up to 2047)
+        let mem[freeRoot] = 28000 - freeRoot; // size of first free block
+        let mem[freeRoot+1] = -1;             // next free block
+        let allocRoot = -1;                   // no memory allocated yet
     }
 
     /** Returns the RAM value at the given address. */
     function int peek(int address) {
-        var Array a;
-        let a = address;
-        return a[0];
+        return mem[address];
     }
 
     /** Sets the RAM value at the given address to the given value. */
     function void poke(int address, int value) {
-        var Array a;
-        let a = address;
-        let a[0] = value;
+        let mem[address] = value;
         return;
     }
 
-    /** Finds an available RAM block of the given size and returns
-     *  a reference to its base address. */
+    /**
+     * Finds an available RAM block of the given size and returns a reference to its base address.
+     *
+     * A memory block always contains the size in the first place (0) and
+     * a pointer to the next free block in the second place (1).
+     */
     function int alloc(int size) {
+
+        var int nextFree;      // while traversing the free list, points to the next free block
+        var int previousFree;  // while traversing the free list, points to the previous free block
+        var int nextAlloc;     // while traversing the alloc list, points to the next alloc block
+        var int previousAlloc; // while traversing the alloc list, points to the previous alloc block
+        var int t1, t2, t3;
+
+        let size = size + 2;   // we need two more for bookkeeping
+
+        let nextFree = freeRoot;
+        let previousFree = -1;
+        while (nextFree != -1 && mem[nextFree] < size) {
+            let previousFree = nextFree;
+            let nextFree = mem[nextFree + 1];
+        }
+
+        // nextFree now contains the address of a free block of memory that can be used
+
+        let t1 = nextFree + size; // address the new and smaller free block
+        let t2 = t1 + 1;          // address where the next should be put
+        let t3 = nextFree + 1;    // first points to next free, then points to next alloc
+        let mem[t1] = mem[nextFree] - size;
+        let mem[t2] = mem[t3]; // copy address of next over to new block
+
+        // update previous (with a special case for an completely empty memory)
+        if (previousFree == -1) {
+            let freeRoot = t1;
+        } else {
+            let mem[previousFree+1] = t1;
+        }
+
+        let mem[nextFree] = size;
+        let mem[t3] = allocRoot;
+        let allocRoot = nextFree;
+
+        return nextFree + 2;
     }
 
     /** De-allocates the given object (cast as an array) by making
