@@ -81,6 +81,35 @@ class Memory {
 
     /** De-allocates the given object (cast as an array) by making
      *  it available for future allocations. */
-    function void deAlloc(Array o) {
+    function void deAlloc(Array address) {
+
+        // 0 - size of block
+        // 1 - next block
+
+        var int blockAddress;
+        var int next, previous;
+
+        let blockAddress = address - 2;
+        let next = allocRoot;
+        let previous = -1;
+        while (next != -1 && nextAlloc != blockAddress) {
+            let previous = next;
+            let next = mem[next+1];
+        }
+        if (next == -1) {
+            // no allocated block found
+            return;
+        }
+
+        // next points to the right alloc block
+        // make previous point to next->next
+        if (previous == -1) {
+            let allocRoot = mem[next+1];
+        } else {
+            let mem[previous+1] = mem[next+1];
+        }
+
+        // todo add free block
+
     }    
 }
