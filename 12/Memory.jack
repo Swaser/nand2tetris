@@ -92,7 +92,7 @@ class Memory {
         let blockAddress = address - 2;
         let next = allocRoot;
         let previous = -1;
-        while (next != -1 && nextAlloc != blockAddress) {
+        while (next != -1 && next != blockAddress) {
             let previous = next;
             let next = mem[next+1];
         }
@@ -101,15 +101,40 @@ class Memory {
             return;
         }
 
-        // next points to the right alloc block
-        // make previous point to next->next
+        // so we have a block at blockAddress
+
+        // make previous point to block->next
         if (previous == -1) {
-            let allocRoot = mem[next+1];
+            let allocRoot = mem[blockAddress + 1];
         } else {
-            let mem[previous+1] = mem[next+1];
+            let mem[previous+1] = mem[blockAddress + 1];
         }
 
-        // todo add free block
+        // todo add add block to freeList
+        let next = freeRoot;
+        let previous = -1;
+        while (next != -1 && next < blockAddress) {
+            let previous = next;
+            let next = mem[next + 1];
+        }
+        if (previous == -1) {
+            let freeRoot = blockAddress;
+        } else {
+            let mem[previous+1] = blockAddress;
+        }
+        let mem[blockAddress+1] = next;
 
+        if (blockAddress + mem[blockAddress] == next) {
+            // the new free block is just before the next free block
+            let mem[blockAddress] = mem[blockAddress] + mem[next];
+            let mem[blockAddress+1] = mem[next+1];
+        }
+        if (previous != -1 && previous + mem[previous] == blockAddress) {
+            // the new free block is just after the previous free block
+            let mem[previous] = mem[previous] + mem[blockAddress];
+            let mem[previous+1] = mem[blockAddress+1];
+        }
+
+        return;
     }    
 }
