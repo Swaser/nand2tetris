@@ -46,7 +46,7 @@ class Memory {
         var int previousFree;  // while traversing the free list, points to the previous free block
         var int nextAlloc;     // while traversing the alloc list, points to the next alloc block
         var int previousAlloc; // while traversing the alloc list, points to the previous alloc block
-        var int t1, t2, t3;
+        var int t1, t3;
 
         let size = size + 2;   // we need two more for bookkeeping
 
@@ -57,13 +57,14 @@ class Memory {
             let nextFree = mem[nextFree + 1];
         }
 
+        // if nextFree == -1 we should crash...
+
         // nextFree now contains the address of a free block of memory that can be used
 
         let t1 = nextFree + size; // address the new and smaller free block
-        let t2 = t1 + 1;          // address where the next should be put
         let t3 = nextFree + 1;    // first points to next free, then points to next alloc
-        let mem[t1] = mem[nextFree] - size;
-        let mem[t2] = mem[t3]; // copy address of next over to new block
+        let mem[t1] = mem[nextFree] - size; // update size
+        let mem[t1 + 1] = mem[t3]; // copy address of next over to new block
 
         // update previous (with a special case for an completely empty memory)
         if (previousFree == -1) {
@@ -72,6 +73,7 @@ class Memory {
             let mem[previousFree+1] = t1;
         }
 
+        // add new alloc block at beginning as new root
         let mem[nextFree] = size;
         let mem[t3] = allocRoot;
         let allocRoot = nextFree;
@@ -110,7 +112,7 @@ class Memory {
             let mem[previous+1] = mem[blockAddress + 1];
         }
 
-        // todo add add block to freeList
+        // add block to freeList
         let next = freeRoot;
         let previous = -1;
         while (next != -1 && next < blockAddress) {
@@ -124,6 +126,7 @@ class Memory {
         }
         let mem[blockAddress+1] = next;
 
+        // "compacting"
         if (blockAddress + mem[blockAddress] == next) {
             // the new free block is just before the next free block
             let mem[blockAddress] = mem[blockAddress] + mem[next];
