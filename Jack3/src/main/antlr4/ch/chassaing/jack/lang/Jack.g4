@@ -59,8 +59,8 @@ block : '{' statement* '}';
 expression : equality;
 equality : comparison (('=='|'!=') comparison)*;
 comparison : term ( ('>'|'>='|'<='|'<') term)*;
-term    : factor (('-'|'+'|'|') factor)*;  // includes bitwise/boolean OR
-factor  : unary (('/'|'*'|'&') unary)*;    // includes bitwise/boolean AND
+term    : factor (('-'|'+'|'||'|'|') factor)*;  // includes bitwise/boolean OR
+factor  : unary (('/'|'*'|'&&'|'&') unary)*;    // includes bitwise/boolean AND
 unary   : ('!'|'-') unary
         | primary
         ;
@@ -97,13 +97,17 @@ FUNCTION : 'function';
 CONSTRUCTOR : 'constructor';
 METHOD : 'method';
 
+ELSE: 'else';
+
 MINUS : '-';
 PLUS : '+';
 DIV : '/';
 MULT : '*';
 
 AND : '&';
+SHORT_AND : '&&';
 OR : '|';
+SHORT_OR : '||';
 NOT : '!';
 
 EQUAL : '==';

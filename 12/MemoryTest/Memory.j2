@@ -53,7 +53,7 @@ class Memory {
 
         let nextFree = freeRoot;
         let previousFree = -1;
-        while ((nextFree != -1) && (mem[nextFree] < size)) {
+        while ((nextFree != -1) & (mem[nextFree] < size)) {
             let previousFree = nextFree;
             let nextFree = mem[nextFree + 1];
         }
@@ -95,7 +95,7 @@ class Memory {
         let blockAddress = address - 2;
         let next = allocRoot;
         let previous = -1;
-        while ((next != -1) && (next != blockAddress)) {
+        while (next != -1 & next != blockAddress) {
             let previous = next;
             let next = mem[next+1];
         }
@@ -133,7 +133,7 @@ class Memory {
             let mem[blockAddress] = mem[blockAddress] + mem[next];
             let mem[blockAddress+1] = mem[next+1];
         }
-        if ((previous != -1) && (previous + mem[previous] == blockAddress)) {
+        if ((previous != -1) & (previous + mem[previous] == blockAddress)) {
             // the new free block is just after the previous free block
             let mem[previous] = mem[previous] + mem[blockAddress];
             let mem[previous+1] = mem[blockAddress+1];

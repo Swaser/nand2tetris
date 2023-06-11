@@ -53,7 +53,7 @@ class Memory {
 
         let nextFree = freeRoot;
         let previousFree = -1;
-        while ((nextFree != -1) && (mem[nextFree] < size)) {
+        while (~(nextFree = -1) & (mem[nextFree] < size)) {
             let previousFree = nextFree;
             let nextFree = mem[nextFree + 1];
         }
@@ -68,7 +68,7 @@ class Memory {
         let mem[t1 + 1] = mem[t3]; // copy address of next over to new block
 
         // update previous (with a special case for an completely empty memory)
-        if (previousFree == -1) {
+        if (previousFree = -1) {
             let freeRoot = t1;
         } else {
             let mem[previousFree+1] = t1;
@@ -95,11 +95,12 @@ class Memory {
         let blockAddress = address - 2;
         let next = allocRoot;
         let previous = -1;
-        while ((next != -1) && (next != blockAddress)) {
+        while (~(next = -1) & ~(next = blockAddress)) {
             let previous = next;
             let next = mem[next+1];
         }
-        if (next == -1) {
+
+        if (next = -1) {
             // no allocated block found
             return;
         }
@@ -107,7 +108,7 @@ class Memory {
         // so we have a block at blockAddress
 
         // make previous point to block->next
-        if (previous == -1) {
+        if (previous = -1) {
             let allocRoot = mem[blockAddress + 1];
         } else {
             let mem[previous+1] = mem[blockAddress + 1];
@@ -116,11 +117,11 @@ class Memory {
         // add block to freeList
         let next = freeRoot;
         let previous = -1;
-        while ((next != -1) & (next < blockAddress)) {
+        while (~(next = -1) & (next < blockAddress)) {
             let previous = next;
             let next = mem[next + 1];
         }
-        if (previous == -1) {
+        if (previous = -1) {
             let freeRoot = blockAddress;
         } else {
             let mem[previous+1] = blockAddress;
@@ -128,12 +129,12 @@ class Memory {
         let mem[blockAddress+1] = next;
 
         // "compacting"
-        if (blockAddress + mem[blockAddress] == next) {
+        if (blockAddress + mem[blockAddress] = next) {
             // the new free block is just before the next free block
             let mem[blockAddress] = mem[blockAddress] + mem[next];
             let mem[blockAddress+1] = mem[next+1];
         }
-        if ((previous != -1) && (previous + mem[previous] == blockAddress)) {
+        if (~(previous = -1) & (previous + mem[previous] = blockAddress)) {
             // the new free block is just after the previous free block
             let mem[previous] = mem[previous] + mem[blockAddress];
             let mem[previous+1] = mem[blockAddress+1];

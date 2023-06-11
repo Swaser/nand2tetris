@@ -245,20 +245,27 @@ public class CompilerVisitor
         if (PrimitiveType.BOOLEAN != expressionType) {
             raise("Expression in if must be boolean", ctx);
         }
+        boolean hasElse = ctx.ifStatement() != null ||
+                          ctx.block(1) != null;
+
         vmWriter.writeArithmetic(Command.NOT);
         vmWriter.writeIf(elseLabel);
-
         visitBlock(ctx.block(0));
-        vmWriter.writeGoto(afterLabel);
-
+        if (hasElse) {
+            vmWriter.writeGoto(afterLabel);
+        }
         vmWriter.writeLabel(elseLabel);
-        if (ctx.ifStatement() != null) {
-            visitIfStatement(ctx.ifStatement());
-        } else if (ctx.block(1) != null) {
-            visitBlock(ctx.block(1));
+
+        if (hasElse) {
+
+            if (ctx.ifStatement() != null) {
+                visitIfStatement(ctx.ifStatement());
+            } else if (ctx.block(1) != null) {
+                visitBlock(ctx.block(1));
+            }
+            vmWriter.writeLabel(afterLabel);
         }
 
-        vmWriter.writeLabel(afterLabel);
         return null;
     }
 
@@ -269,7 +276,7 @@ public class CompilerVisitor
         String afterLabel = subroutineInfo.nextLabel();
 
         vmWriter.writeLabel(whileLabel);
-        Type expressionType = (Type)visitExpression(ctx.expression());
+        Type expressionType = (Type) visitExpression(ctx.expression());
         if (PrimitiveType.BOOLEAN != expressionType) {
             raise("Expression in while must be boolean", ctx);
         }
@@ -390,40 +397,57 @@ public class CompilerVisitor
     public Type visitTerm(JackParser.TermContext ctx)
     {
         TerminalNode op = null;
+        Type type = null;
         Type previousType = null;
         int childCount = ctx.getChildCount();
         for (int i = 0; i < childCount; i++) {
-            if (i % 2 == 1) {
+            if (i % 2 == 1) { // i odd
                 op = (TerminalNode) ctx.getChild(i);
-            } else {
-                Type type = visitFactor((JackParser.FactorContext) ctx.getChild(i));
-                if (type == null) {
-                    raise("A term element must have a type", ctx);
-                }
-                if (op != null) {
-                    if (op.getSymbol().getType() == JackParser.OR) {
-                        // types must not be UserType and should be compatible
-                        if (type instanceof UserType || previousType instanceof UserType) {
-                            raise("OR not permitted with user types", ctx);
-                        } else if (!type.compatible(previousType)) {
-                            raise("Types must be compatible for OR", ctx);
-                        }
-                    } else if (!PrimitiveType.INT.compatible(type) || !PrimitiveType.INT.compatible(previousType)) {
-                        raise("Types must be compatible with int : %s; %s".formatted(previousType, type), ctx);
-                    }
-                    switch (op.getSymbol().getType()) {
-                        case JackParser.MINUS -> vmWriter.writeArithmetic(Command.SUB);
-                        case JackParser.PLUS -> vmWriter.writeArithmetic(Command.ADD);
-                        case JackParser.OR -> vmWriter.writeArithmetic(Command.OR);
-                        default -> raise("Unknown symbol " + op, ctx);
-                    }
-                    op = null;
-                }
                 previousType = type;
+            } else { // i even
+                if (op != null && op.getSymbol().getType() == JackParser.SHORT_OR) {
+                    String trueLabel = subroutineInfo.nextLabel();
+                    String endLabel = subroutineInfo.nextLabel();
+                    vmWriter.writeIf(trueLabel);
+                    type = visitFactor((JackParser.FactorContext) ctx.getChild(i));
+                    // only booleans allowed
+                    if (!PrimitiveType.BOOLEAN.compatible(type) ||
+                        !PrimitiveType.BOOLEAN.compatible(previousType)) {
+                        raise("Short circuit OR can only be applied to booleans", ctx);
+                    }
+                    vmWriter.writeGoto(endLabel);
+                    vmWriter.writeLabel(trueLabel);
+                    vmWriter.writePush(Segment.CONSTANT, 0);
+                    vmWriter.writeArithmetic(Command.NOT);
+                    vmWriter.writeLabel(endLabel);
+                } else {
+                    type = visitFactor((JackParser.FactorContext) ctx.getChild(i));
+                    if (type == null) {
+                        raise("A term element must have a type", ctx);
+                    }
+                    if (op != null) {
+                        if (op.getSymbol().getType() == JackParser.OR) {
+                            // types must not be UserType and should be compatible
+                            if (type instanceof UserType || previousType instanceof UserType) {
+                                raise("OR not permitted with user types", ctx);
+                            } else if (!type.compatible(previousType)) {
+                                raise("Types must be compatible for OR", ctx);
+                            }
+                        } else if (!PrimitiveType.INT.compatible(type) || !PrimitiveType.INT.compatible(previousType)) {
+                            raise("Types must be compatible with int : %s; %s".formatted(previousType, type), ctx);
+                        }
+                        switch (op.getSymbol().getType()) {
+                            case JackParser.MINUS -> vmWriter.writeArithmetic(Command.SUB);
+                            case JackParser.PLUS -> vmWriter.writeArithmetic(Command.ADD);
+                            case JackParser.OR -> vmWriter.writeArithmetic(Command.OR);
+                            default -> raise("Unknown symbol " + op, ctx);
+                        }
+                    }
+                }
+                op = null;
             }
         }
-        requireNonNull(previousType);
-        return previousType;
+        return requireNonNull(type);
     }
 
     @Override
@@ -431,38 +455,60 @@ public class CompilerVisitor
     {
         TerminalNode op = null;
         Type previousType = null;
+        Type type = null;
         int childCount = ctx.getChildCount();
         for (int i = 0; i < childCount; i++) {
             if (i % 2 == 1) {
                 op = (TerminalNode) ctx.getChild(i);
-            } else {
-                Type type = visitUnary((JackParser.UnaryContext) ctx.getChild(i));
-                if (type == null) {
-                    raise("A factor element must have a type", ctx);
-                }
-                if (op != null) {
-                    if (op.getSymbol().getType() == JackParser.AND) {
-                        // types must not be UserType and should be compatible
-                        if (type instanceof UserType || previousType instanceof UserType) {
-                            raise("AND not permitted with user types", ctx);
-                        } else if (!type.compatible(previousType)) {
-                            raise("Types must be compatible for AND", ctx);
-                        }
-                    } else if (!PrimitiveType.INT.compatible(type) || !PrimitiveType.INT.compatible(previousType)) {
-                        raise("Types must be compatible with int : %s; %s".formatted(previousType, type), ctx);
-                    }
-                    switch (op.getSymbol().getType()) {
-                        case JackParser.DIV -> vmWriter.writeCall("Math.divide", 2);
-                        case JackParser.MULT -> vmWriter.writeCall("Math.multiply", 2);
-                        case JackParser.AND -> vmWriter.writeArithmetic(Command.AND);
-                        default -> raise("Unknown symbol " + op, ctx);
-                    }
-                    op = null;
-                }
                 previousType = type;
+            } else {
+                if (op != null && op.getSymbol().getType() == JackParser.SHORT_AND) {
+                    String falseLabel = subroutineInfo.nextLabel();
+                    String endLabel = subroutineInfo.nextLabel();
+                    vmWriter.writeArithmetic(Command.NOT);
+                    vmWriter.writeIf(falseLabel);
+                    type = visitUnary((JackParser.UnaryContext) ctx.getChild(i));
+                    // only booleans allowed
+                    if (!PrimitiveType.BOOLEAN.compatible(type) ||
+                        !PrimitiveType.BOOLEAN.compatible(previousType)) {
+                        raise("Short circuit AND can only be applied to booleans", ctx);
+                    }
+                    vmWriter.writeGoto(endLabel);
+                    vmWriter.writeLabel(falseLabel);
+                    vmWriter.writePush(Segment.CONSTANT, 0); // false
+                    vmWriter.writeLabel(endLabel);
+                } else {
+                    type = visitUnary((JackParser.UnaryContext) ctx.getChild(i));
+                    if (type == null) {
+                        raise("A factor element must have a type", ctx);
+                    }
+                    if (op != null) {
+                        type = visitUnary((JackParser.UnaryContext) ctx.getChild(i));
+                        if (type == null) {
+                            raise("A factor element must have a type", ctx);
+                        }
+                        if (op.getSymbol().getType() == JackParser.AND) {
+                            // types must not be UserType and should be compatible
+                            if (type instanceof UserType || previousType instanceof UserType) {
+                                raise("AND not permitted with user types", ctx);
+                            } else if (!type.compatible(previousType)) {
+                                raise("Types must be compatible for AND", ctx);
+                            }
+                        } else if (!PrimitiveType.INT.compatible(type) || !PrimitiveType.INT.compatible(previousType)) {
+                            raise("Types must be compatible with int : %s; %s".formatted(previousType, type), ctx);
+                        }
+                        switch (op.getSymbol().getType()) {
+                            case JackParser.DIV -> vmWriter.writeCall("Math.divide", 2);
+                            case JackParser.MULT -> vmWriter.writeCall("Math.multiply", 2);
+                            case JackParser.AND -> vmWriter.writeArithmetic(Command.AND);
+                            default -> raise("Unknown symbol " + op, ctx);
+                        }
+                    }
+                }
+                op = null;
             }
         }
-        return requireNonNull(previousType);
+        return requireNonNull(type);
     }
 
     @Override
@@ -622,8 +668,8 @@ public class CompilerVisitor
 
         if (var != null) {
             // Muss eine Methode sein
-            if (!(var.type() instanceof UserType)) {
-                raise("Can only call methods on user types", ctx);
+            if (!(var.type() instanceof UserType || var.type() instanceof Array)) {
+                raise("Cannot call methods on primitive types", ctx);
             }
             if (var.scope() == VarScope.FIELD) {
                 if (subroutineInfo.scope() == SubroutineScope.FUNCTION) {
@@ -635,7 +681,9 @@ public class CompilerVisitor
             vmWriter.writePush(var.scope().segment, var.order());
             // (restliche) Argumente auf den Stack holen
             visitExpressionList(ctx.expressionList());
-            vmWriter.writeCall(((UserType) var.type()).name() + "." + fun, nArgs + 1);
+            String callee = var.type() instanceof UserType userType ?
+                            userType.name() : "Array";
+            vmWriter.writeCall(callee + "." + fun, nArgs + 1);
         } else {
             // Muss Funktion oder Konstruktor sein
             visitExpressionList(ctx.expressionList());
