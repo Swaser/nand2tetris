@@ -29,11 +29,13 @@ class Math {
      */
     function int multiply(int x, int y) {
         var int sum, shiftedX, i, mask;
+        let sum = 0;
+        let i = 0;
         let shiftedX = x;
         let mask = 1;
         while (i < 16) {
             // the i-th bit is set
-            if (mask & y > 0) {
+            if ((mask & y) == mask) {
                 let sum = sum + shiftedX;
             }
             let shiftedX = shiftedX + shiftedX;
@@ -49,16 +51,16 @@ class Math {
      *  the Jack expressions x/y and divide(x,y) return the same value.
      */
     function int divide(int x, int y) {
-        var int q, doubleY;
-        if (y > x) {
+        var int q, _2q;
+        if (Math.abs(y) > Math.abs(x)) {
             return 0;
         }
-        let doubleY = y + y;
-        let q = Math.divide(x, doubleY);
-        if (x - doubleY * q < y) {
-            return q + q;
+        let q = Math.divide(x, y + y);
+        let _2q = q + q;
+        if (x - y * _2q < y) {
+            return _2q;
         } else {
-            return q + q + 1;
+            return _2q + 1;
         }
     }
 

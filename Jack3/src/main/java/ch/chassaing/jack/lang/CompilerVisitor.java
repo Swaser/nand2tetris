@@ -483,10 +483,6 @@ public class CompilerVisitor
                         raise("A factor element must have a type", ctx);
                     }
                     if (op != null) {
-                        type = visitUnary((JackParser.UnaryContext) ctx.getChild(i));
-                        if (type == null) {
-                            raise("A factor element must have a type", ctx);
-                        }
                         if (op.getSymbol().getType() == JackParser.AND) {
                             // types must not be UserType and should be compatible
                             if (type instanceof UserType || previousType instanceof UserType) {
