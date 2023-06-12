@@ -9,8 +9,19 @@
  */
 class Math {
 
+    static Array ps; // array 2^j
+
     /** Initializes the library. */
     function void init() {
+        let ps = Array.new(8);
+        let ps[0] =   1;   // 2^0
+        let ps[1] =   2;   // 2^1
+        let ps[2] =   4;   // 2^2
+        let ps[3] =   8;   // 2^3
+        let ps[4] =  16;   // 2^4
+        let ps[5] =  32;   // 2^5
+        let ps[6] =  64;   // 2^6
+        let ps[7] = 128;   // 2^7
         return;
     }
 
@@ -52,7 +63,11 @@ class Math {
      */
     function int divide(int x, int y) {
         var int q, _2q;
-        if (Math.abs(y) > Math.abs(x)) {
+        if (((x < 0) && (y > 0)) ||
+            ((x >= 0) && (y < 0))) {
+            return -Math.divide(Math.abs(x), Math.abs(y));
+        }
+        if (y > x) {
             return 0;
         }
         let q = Math.divide(x, y + y);
@@ -66,16 +81,19 @@ class Math {
 
     /** Returns the integer part of the square root of x. */
     function int sqrt(int x) {
-        var int y, j, p, t;
-        let j = 7; // n/2 - 1
-        let p = 128; // 2^j
+        var int y, j, p, t, t2;
+
+        let j = 7;    // n/2 - 1
+        let p = ps[7];
+        let y = 0;
         while (j >= 0) {
             let t = y + p;
-            if (Math.multiply(t,t) <= x) {
+            let t2 = Math.multiply(t,t); // negative if overflow
+            if ((t2 > 0) && (t2 <= x)) {
                 let y = t;
             }
             let j = j - 1;
-            let p = Math.divide(p,2);
+            let p = ps[j];
         }
         return y;
     }
