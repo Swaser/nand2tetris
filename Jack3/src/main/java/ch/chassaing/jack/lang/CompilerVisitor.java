@@ -14,8 +14,7 @@ import static java.util.Objects.requireNonNull;
  * One per class
  */
 public class CompilerVisitor
-        extends JackBaseVisitor<Object>
-{
+        extends JackBaseVisitor<Object> {
     private final VMWriter vmWriter;
 
     private ClassInfo classInfo;
@@ -26,30 +25,28 @@ public class CompilerVisitor
     public CompilerVisitor(VMWriter vmWriter) {this.vmWriter = vmWriter;}
 
     private void raise(@NotNull String message,
-                       @NotNull ParserRuleContext ctx)
-    {
+                       @NotNull ParserRuleContext ctx) {
 
         throw new IllegalArgumentException(message + " at " + ctx.getText());
     }
 
     private void warn(@NotNull String message,
-                      @NotNull ParserRuleContext ctx)
-    {
+                      @NotNull ParserRuleContext ctx) {
 
         System.out.println(message + " at " + ctx.getText());
     }
 
     @Override
-    public Type visitClass(JackParser.ClassContext ctx)
-    {
+    public Type visitClass(JackParser.ClassContext ctx) {
+
         classInfo = new ClassInfo(ctx.ID().getText());
         visitChildren(ctx);
         return Type.of(classInfo.name());
     }
 
     @Override
-    public Type visitStaticVarDec(JackParser.StaticVarDecContext ctx)
-    {
+    public Type visitStaticVarDec(JackParser.StaticVarDecContext ctx) {
+
         requireNonNull(classInfo);
         mustBeNull(varScope);
         varScope = VarScope.STATIC;
@@ -59,8 +56,8 @@ public class CompilerVisitor
     }
 
     @Override
-    public Type visitFieldVarDec(JackParser.FieldVarDecContext ctx)
-    {
+    public Type visitFieldVarDec(JackParser.FieldVarDecContext ctx) {
+
         requireNonNull(classInfo);
         mustBeNull(varScope);
         varScope = VarScope.FIELD;
@@ -70,8 +67,8 @@ public class CompilerVisitor
     }
 
     @Override
-    public Type visitSubroutineDec(JackParser.SubroutineDecContext ctx)
-    {
+    public Type visitSubroutineDec(JackParser.SubroutineDecContext ctx) {
+
         requireNonNull(classInfo);
         mustBeNull(subroutineInfo);
 
@@ -126,8 +123,8 @@ public class CompilerVisitor
     }
 
     @Override
-    public Type visitParameter(JackParser.ParameterContext ctx)
-    {
+    public Type visitParameter(JackParser.ParameterContext ctx) {
+
         requireNonNull(subroutineInfo);
         Type type = visitType(ctx.type()); // determine the type
 
@@ -140,8 +137,8 @@ public class CompilerVisitor
     }
 
     @Override
-    public Type visitLocalVarDec(JackParser.LocalVarDecContext ctx)
-    {
+    public Type visitLocalVarDec(JackParser.LocalVarDecContext ctx) {
+
         mustBeNull(varScope);
         varScope = VarScope.LOCAL;
         Type type = visitVarDec(ctx.varDec());
@@ -150,8 +147,8 @@ public class CompilerVisitor
     }
 
     @Override
-    public Type visitVarDec(JackParser.VarDecContext ctx)
-    {
+    public Type visitVarDec(JackParser.VarDecContext ctx) {
+
         requireNonNull(classInfo);
         requireNonNull(varScope);
         if (varScope == VarScope.LOCAL) {
@@ -176,8 +173,8 @@ public class CompilerVisitor
     }
 
     @Override
-    public Type visitType(JackParser.TypeContext ctx)
-    {
+    public Type visitType(JackParser.TypeContext ctx) {
+
         if (ctx.INT() != null) {
             return PrimitiveType.INT;
         } else if (ctx.CHAR() != null) {
@@ -190,8 +187,8 @@ public class CompilerVisitor
     }
 
     @Override
-    public Object visitAssignVariable(JackParser.AssignVariableContext ctx)
-    {
+    public Object visitAssignVariable(JackParser.AssignVariableContext ctx) {
+
         VarInfo varInfo = visitVarUse(ctx.varUse());
         Type varType = varInfo.type();
         Type expressionType = (Type) visitExpression(ctx.expression());
@@ -205,8 +202,7 @@ public class CompilerVisitor
     }
 
     @Override
-    public Object visitAssignArray(JackParser.AssignArrayContext ctx)
-    {
+    public Object visitAssignArray(JackParser.AssignArrayContext ctx) {
         /*
          * We first evaluate the right hand side of the assignment. This way
          * we don't need to store the right hand side in a temp as is
@@ -237,8 +233,8 @@ public class CompilerVisitor
     }
 
     @Override
-    public Type visitIfStatement(JackParser.IfStatementContext ctx)
-    {
+    public Type visitIfStatement(JackParser.IfStatementContext ctx) {
+
         String elseLabel = subroutineInfo.nextLabel();
         String afterLabel = subroutineInfo.nextLabel();
         Type expressionType = (Type) visitExpression(ctx.expression());
@@ -270,8 +266,8 @@ public class CompilerVisitor
     }
 
     @Override
-    public Type visitWhileStatement(JackParser.WhileStatementContext ctx)
-    {
+    public Type visitWhileStatement(JackParser.WhileStatementContext ctx) {
+
         String whileLabel = subroutineInfo.nextLabel();
         String afterLabel = subroutineInfo.nextLabel();
 
@@ -291,16 +287,16 @@ public class CompilerVisitor
     }
 
     @Override
-    public Type visitDoStatement(JackParser.DoStatementContext ctx)
-    {
+    public Type visitDoStatement(JackParser.DoStatementContext ctx) {
+
         visitSubroutineCall(ctx.subroutineCall());
         vmWriter.writePop(Segment.TEMP, 0);
         return null;
     }
 
     @Override
-    public Type visitReturnStatement(JackParser.ReturnStatementContext ctx)
-    {
+    public Type visitReturnStatement(JackParser.ReturnStatementContext ctx) {
+
         Type returnType = null;
         if (ctx.expression() != null) {
             returnType = (Type) visitExpression(ctx.expression());
@@ -322,8 +318,55 @@ public class CompilerVisitor
     }
 
     @Override
-    public Type visitEquality(JackParser.EqualityContext ctx)
-    {
+    public Type visitCombination(JackParser.CombinationContext ctx) {
+
+        TerminalNode op = null;
+        Type type = null, previousType = null;
+        int childCount = ctx.getChildCount();
+        for (int i = 0; i < childCount; i++) {
+            if (i % 2 == 1) {
+                op = (TerminalNode) ctx.getChild(i);
+                previousType = type;
+            } else {
+                type = visitEquality((JackParser.EqualityContext) ctx.getChild(i));
+                if (type == null) {
+                    raise("type is null", ctx);
+                }
+                if (op != null) {
+                    String skipLabel = subroutineInfo.nextLabel();
+                    String endLabel = subroutineInfo.nextLabel();
+
+                    if (op.getSymbol().getType() == JackParser.SHORT_AND) {
+                        vmWriter.writeArithmetic(Command.NOT);
+                    }
+
+                    // skip to end if && false or || true
+                    vmWriter.writeIf(skipLabel);
+                    // evaluate second only if not skipped
+                    type = visitFactor((JackParser.FactorContext) ctx.getChild(i));
+                    // only booleans allowed
+                    if (!PrimitiveType.BOOLEAN.compatible(type) ||
+                        !PrimitiveType.BOOLEAN.compatible(previousType)) {
+                        raise("Short circuit can only be applied to booleans", ctx);
+                    }
+                    vmWriter.writeGoto(endLabel);
+                    vmWriter.writeLabel(skipLabel);
+
+                    // result of skipped is false for && and true for ||
+                    vmWriter.writePush(Segment.CONSTANT, 0);
+                    if (op.getSymbol().getType() == JackParser.SHORT_OR) {
+                        vmWriter.writeArithmetic(Command.NOT);
+                    }
+                    vmWriter.writeLabel(endLabel);
+                }
+            }
+        }
+        return requireNonNull(type);
+    }
+
+    @Override
+    public Type visitEquality(JackParser.EqualityContext ctx) {
+
         TerminalNode op = null;
         Type previousType = null;
         int childCount = ctx.getChildCount();
@@ -354,8 +397,8 @@ public class CompilerVisitor
     }
 
     @Override
-    public Type visitComparison(JackParser.ComparisonContext ctx)
-    {
+    public Type visitComparison(JackParser.ComparisonContext ctx) {
+
         TerminalNode op = null;
         Type previousType = null;
         int childCount = ctx.getChildCount();
@@ -394,8 +437,8 @@ public class CompilerVisitor
     }
 
     @Override
-    public Type visitTerm(JackParser.TermContext ctx)
-    {
+    public Type visitTerm(JackParser.TermContext ctx) {
+
         TerminalNode op = null;
         Type type = null;
         Type previousType = null;
@@ -405,43 +448,26 @@ public class CompilerVisitor
                 op = (TerminalNode) ctx.getChild(i);
                 previousType = type;
             } else { // i even
-                if (op != null && op.getSymbol().getType() == JackParser.SHORT_OR) {
-                    String trueLabel = subroutineInfo.nextLabel();
-                    String endLabel = subroutineInfo.nextLabel();
-                    vmWriter.writeIf(trueLabel);
-                    type = visitFactor((JackParser.FactorContext) ctx.getChild(i));
-                    // only booleans allowed
-                    if (!PrimitiveType.BOOLEAN.compatible(type) ||
-                        !PrimitiveType.BOOLEAN.compatible(previousType)) {
-                        raise("Short circuit OR can only be applied to booleans", ctx);
-                    }
-                    vmWriter.writeGoto(endLabel);
-                    vmWriter.writeLabel(trueLabel);
-                    vmWriter.writePush(Segment.CONSTANT, 0);
-                    vmWriter.writeArithmetic(Command.NOT);
-                    vmWriter.writeLabel(endLabel);
-                } else {
-                    type = visitFactor((JackParser.FactorContext) ctx.getChild(i));
-                    if (type == null) {
-                        raise("A term element must have a type", ctx);
-                    }
-                    if (op != null) {
-                        if (op.getSymbol().getType() == JackParser.OR) {
-                            // types must not be UserType and should be compatible
-                            if (type instanceof UserType || previousType instanceof UserType) {
-                                raise("OR not permitted with user types", ctx);
-                            } else if (!type.compatible(previousType)) {
-                                raise("Types must be compatible for OR", ctx);
-                            }
-                        } else if (!PrimitiveType.INT.compatible(type) || !PrimitiveType.INT.compatible(previousType)) {
-                            raise("Types must be compatible with int : %s; %s".formatted(previousType, type), ctx);
+                type = visitFactor((JackParser.FactorContext) ctx.getChild(i));
+                if (type == null) {
+                    raise("A term element must have a type", ctx);
+                }
+                if (op != null) {
+                    if (op.getSymbol().getType() == JackParser.OR) {
+                        // types must not be UserType and should be compatible
+                        if (type instanceof UserType || previousType instanceof UserType) {
+                            raise("OR not permitted with user types", ctx);
+                        } else if (!type.compatible(previousType)) {
+                            raise("Types must be compatible for OR", ctx);
                         }
-                        switch (op.getSymbol().getType()) {
-                            case JackParser.MINUS -> vmWriter.writeArithmetic(Command.SUB);
-                            case JackParser.PLUS -> vmWriter.writeArithmetic(Command.ADD);
-                            case JackParser.OR -> vmWriter.writeArithmetic(Command.OR);
-                            default -> raise("Unknown symbol " + op, ctx);
-                        }
+                    } else if (!PrimitiveType.INT.compatible(type) || !PrimitiveType.INT.compatible(previousType)) {
+                        raise("Types must be compatible with int : %s; %s".formatted(previousType, type), ctx);
+                    }
+                    switch (op.getSymbol().getType()) {
+                        case JackParser.MINUS -> vmWriter.writeArithmetic(Command.SUB);
+                        case JackParser.PLUS -> vmWriter.writeArithmetic(Command.ADD);
+                        case JackParser.OR -> vmWriter.writeArithmetic(Command.OR);
+                        default -> raise("Unknown symbol " + op, ctx);
                     }
                 }
                 op = null;
@@ -451,8 +477,8 @@ public class CompilerVisitor
     }
 
     @Override
-    public Type visitFactor(JackParser.FactorContext ctx)
-    {
+    public Type visitFactor(JackParser.FactorContext ctx) {
+
         TerminalNode op = null;
         Type previousType = null;
         Type type = null;
@@ -462,47 +488,30 @@ public class CompilerVisitor
                 op = (TerminalNode) ctx.getChild(i);
                 previousType = type;
             } else {
-                if (op != null && op.getSymbol().getType() == JackParser.SHORT_AND) {
-                    String falseLabel = subroutineInfo.nextLabel();
-                    String endLabel = subroutineInfo.nextLabel();
-                    vmWriter.writeArithmetic(Command.NOT);
-                    vmWriter.writeIf(falseLabel);
-                    type = visitUnary((JackParser.UnaryContext) ctx.getChild(i));
-                    // only booleans allowed
-                    if (!PrimitiveType.BOOLEAN.compatible(type) ||
-                        !PrimitiveType.BOOLEAN.compatible(previousType)) {
-                        raise("Short circuit AND can only be applied to booleans", ctx);
-                    }
-                    vmWriter.writeGoto(endLabel);
-                    vmWriter.writeLabel(falseLabel);
-                    vmWriter.writePush(Segment.CONSTANT, 0); // false
-                    vmWriter.writeLabel(endLabel);
-                } else {
+                type = visitUnary((JackParser.UnaryContext) ctx.getChild(i));
+                if (type == null) {
+                    raise("A factor element must have a type", ctx);
+                }
+                if (op != null) {
                     type = visitUnary((JackParser.UnaryContext) ctx.getChild(i));
                     if (type == null) {
                         raise("A factor element must have a type", ctx);
                     }
-                    if (op != null) {
-                        type = visitUnary((JackParser.UnaryContext) ctx.getChild(i));
-                        if (type == null) {
-                            raise("A factor element must have a type", ctx);
+                    if (op.getSymbol().getType() == JackParser.AND) {
+                        // types must not be UserType and should be compatible
+                        if (type instanceof UserType || previousType instanceof UserType) {
+                            raise("AND not permitted with user types", ctx);
+                        } else if (!type.compatible(previousType)) {
+                            raise("Types must be compatible for AND", ctx);
                         }
-                        if (op.getSymbol().getType() == JackParser.AND) {
-                            // types must not be UserType and should be compatible
-                            if (type instanceof UserType || previousType instanceof UserType) {
-                                raise("AND not permitted with user types", ctx);
-                            } else if (!type.compatible(previousType)) {
-                                raise("Types must be compatible for AND", ctx);
-                            }
-                        } else if (!PrimitiveType.INT.compatible(type) || !PrimitiveType.INT.compatible(previousType)) {
-                            raise("Types must be compatible with int : %s; %s".formatted(previousType, type), ctx);
-                        }
-                        switch (op.getSymbol().getType()) {
-                            case JackParser.DIV -> vmWriter.writeCall("Math.divide", 2);
-                            case JackParser.MULT -> vmWriter.writeCall("Math.multiply", 2);
-                            case JackParser.AND -> vmWriter.writeArithmetic(Command.AND);
-                            default -> raise("Unknown symbol " + op, ctx);
-                        }
+                    } else if (!PrimitiveType.INT.compatible(type) || !PrimitiveType.INT.compatible(previousType)) {
+                        raise("Types must be compatible with int : %s; %s".formatted(previousType, type), ctx);
+                    }
+                    switch (op.getSymbol().getType()) {
+                        case JackParser.DIV -> vmWriter.writeCall("Math.divide", 2);
+                        case JackParser.MULT -> vmWriter.writeCall("Math.multiply", 2);
+                        case JackParser.AND -> vmWriter.writeArithmetic(Command.AND);
+                        default -> raise("Unknown symbol " + op, ctx);
                     }
                 }
                 op = null;
@@ -512,8 +521,8 @@ public class CompilerVisitor
     }
 
     @Override
-    public Type visitUnary(JackParser.UnaryContext ctx)
-    {
+    public Type visitUnary(JackParser.UnaryContext ctx) {
+
         Type type = (Type) visitChildren(ctx);
         if (type == null) {
             raise("An unary element must have a type", ctx);
@@ -533,8 +542,8 @@ public class CompilerVisitor
     }
 
     @Override
-    public Type visitPrimary(JackParser.PrimaryContext ctx)
-    {
+    public Type visitPrimary(JackParser.PrimaryContext ctx) {
+
         if (ctx.expression() != null) {
             return (Type) visitExpression(ctx.expression());
         } else if (ctx.subroutineCall() != null) {
@@ -586,8 +595,8 @@ public class CompilerVisitor
 
     @Override
     @NotNull
-    public VarInfo visitVarUse(JackParser.VarUseContext ctx)
-    {
+    public VarInfo visitVarUse(JackParser.VarUseContext ctx) {
+
         String varName = ctx.ID().getText();
         if (ctx.THIS() != null) {
             VarInfo result = classInfo.findVar(varName);
@@ -604,8 +613,7 @@ public class CompilerVisitor
     }
 
     @Override
-    public Type visitArrayReferencing(JackParser.ArrayReferencingContext ctx)
-    {
+    public Type visitArrayReferencing(JackParser.ArrayReferencingContext ctx) {
 
         String varName = ctx.ID().getText();
         VarInfo varInfo = getVarInfo(ctx, varName);
@@ -629,8 +637,8 @@ public class CompilerVisitor
 
     @NotNull
     private VarInfo getVarInfo(ParserRuleContext ctx,
-                               String varName)
-    {
+                               String varName) {
+
         VarInfo varInfo = subroutineInfo.findVar(varName);
         if (varInfo == null) {
             raise("Couldn't find variable " + varName, ctx);
@@ -639,8 +647,8 @@ public class CompilerVisitor
     }
 
     @Override
-    public Type visitCallLocal(JackParser.CallLocalContext ctx)
-    {
+    public Type visitCallLocal(JackParser.CallLocalContext ctx) {
+
         if (!subroutineInfo.scope().callFromLocal()) {
             raise("local calls can only be made from other methods", ctx);
         }
@@ -653,8 +661,7 @@ public class CompilerVisitor
     }
 
     @Override
-    public Type visitCallRemote(JackParser.CallRemoteContext ctx)
-    {
+    public Type visitCallRemote(JackParser.CallRemoteContext ctx) {
         /*
          In Nand 2 Tetris haben wir keine Kenntnis über andere Klassen.
          Deshalb gilt folgende Konvention:
@@ -692,8 +699,8 @@ public class CompilerVisitor
         return UnknownType.INSTANCE;
     }
 
-    private static void mustBeNull(Object object)
-    {
+    private static void mustBeNull(Object object) {
+
         if (object != null) {
             throw new IllegalArgumentException();
         }

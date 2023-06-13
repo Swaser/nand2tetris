@@ -56,11 +56,12 @@ returnStatement : 'return' expression? ';';
 
 block : '{' statement* '}';
 
-expression : equality;
+expression : combination;
+combination : equality (('&&'||'||') equality)*;
 equality : comparison (('=='|'!=') comparison)*;
 comparison : term ( ('>'|'>='|'<='|'<') term)*;
-term    : factor (('-'|'+'|'||'|'|') factor)*;  // includes bitwise/boolean OR
-factor  : unary (('/'|'*'|'&&'|'&') unary)*;    // includes bitwise/boolean AND
+term    : factor (('-'|'+'|'|') factor)*;  // includes bitwise/boolean OR
+factor  : unary (('/'|'*'|'&') unary)*;    // includes bitwise/boolean AND
 unary   : ('!'|'-') unary
         | primary
         ;
