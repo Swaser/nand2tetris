@@ -26,7 +26,8 @@ class String {
 
     /** Disposes this string. */
     method void dispose() {
-        // TODO
+        Memory.deAlloc(value);
+        Memory.deAlloc(this);
         return;
     }
 
@@ -43,8 +44,9 @@ class String {
 
     /** Sets the character at the j-th location of this string to c. */
     method void setCharAt(int j, char c) {
-        // TODO check length
-        let value[j] = c;
+        if (j >= 0 && j < maxLength) {
+            let value[j] = c;
+        }
         return;
     }
 
@@ -59,10 +61,11 @@ class String {
 
     /** Erases the last character from this string. */
     method void eraseLastChar() {
+        var int i;
         if (length > 0) {
-            // for safety
-            let value[length] = 0;
-            let length = length - 1;
+            let i = length -1 ;
+            let value[i] = 0; // to be sure
+            let length = i;
         }
         return;
     }
