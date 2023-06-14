@@ -6,9 +6,11 @@ import ch.chassaing.jack.lang.var.VarScope;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 public final class SubroutineInfo
 {
@@ -91,8 +93,14 @@ public final class SubroutineInfo
 
     public @Nullable Type returnType() {return returnType;}
 
-    public String nextLabel()
+    public String nextLabel(String... adds)
     {
+        if (adds.length > 0) {
+            return "%s.%s$%d"
+                    .formatted(fullName(),
+                               String.join(".", adds),
+                               labelNo++);
+        }
         return "%s$%d".formatted(fullName(), labelNo++);
     }
 
@@ -102,8 +110,9 @@ public final class SubroutineInfo
         return "%s.%s".formatted(classInfo.name(), name);
     }
 
-    public int numberOfLocalVars() {
-        
+    public int numberOfLocalVars()
+    {
+
         int num = 0;
         for (VarInfo varInfo : vars.values()) {
             if (varInfo.scope() == VarScope.LOCAL) {
@@ -112,7 +121,7 @@ public final class SubroutineInfo
         }
         return num;
     }
-    
+
     @Override
     public boolean equals(Object obj)
     {

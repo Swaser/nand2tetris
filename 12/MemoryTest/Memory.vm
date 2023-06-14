@@ -58,7 +58,7 @@ neg
 eq
 not
 not
-if-goto Memory.alloc$2
+if-goto Memory.alloc.skipShortCircuit$2
 push static 0
 push local 0
 add
@@ -66,10 +66,10 @@ pop pointer 1
 push that 0
 push argument 0
 lt
-goto Memory.alloc$3
-label Memory.alloc$2
+goto Memory.alloc.endShortCircuit$3
+label Memory.alloc.skipShortCircuit$2
 push constant 0
-label Memory.alloc$3
+label Memory.alloc.endShortCircuit$3
 not
 if-goto Memory.alloc$1
 push local 0
@@ -170,15 +170,15 @@ neg
 eq
 not
 not
-if-goto Memory.deAlloc$2
+if-goto Memory.deAlloc.skipShortCircuit$2
 push local 1
 push local 0
 eq
 not
-goto Memory.deAlloc$3
-label Memory.deAlloc$2
+goto Memory.deAlloc.endShortCircuit$3
+label Memory.deAlloc.skipShortCircuit$2
 push constant 0
-label Memory.deAlloc$3
+label Memory.deAlloc.endShortCircuit$3
 not
 if-goto Memory.deAlloc$1
 push local 1
@@ -244,13 +244,15 @@ push constant 1
 neg
 eq
 not
+not
+if-goto Memory.deAlloc.skipShortCircuit$10
 push local 1
 push local 0
 lt
-push local 1
-push local 0
-lt
-and
+goto Memory.deAlloc.endShortCircuit$11
+label Memory.deAlloc.skipShortCircuit$10
+push constant 0
+label Memory.deAlloc.endShortCircuit$11
 not
 if-goto Memory.deAlloc$9
 push local 1
@@ -270,122 +272,122 @@ push constant 1
 neg
 eq
 not
-if-goto Memory.deAlloc$10
+if-goto Memory.deAlloc$12
 push local 0
 pop static 1
-goto Memory.deAlloc$11
-label Memory.deAlloc$10
-push local 0
-push static 0
-push local 2
-push constant 1
-add
-add
-pop pointer 1
-pop that 0
-label Memory.deAlloc$11
-push local 1
-push static 0
-push local 0
-push constant 1
-add
-add
-pop pointer 1
-pop that 0
-push local 0
-push static 0
-push local 0
-add
-pop pointer 1
-push that 0
-add
-push local 1
-eq
-not
-if-goto Memory.deAlloc$12
-push static 0
-push local 0
-add
-pop pointer 1
-push that 0
-push static 0
-push local 1
-add
-pop pointer 1
-push that 0
-add
-push static 0
-push local 0
-add
-pop pointer 1
-pop that 0
-push static 0
-push local 1
-push constant 1
-add
-add
-pop pointer 1
-push that 0
-push static 0
-push local 0
-push constant 1
-add
-add
-pop pointer 1
-pop that 0
+goto Memory.deAlloc$13
 label Memory.deAlloc$12
-push local 2
-push constant 1
-neg
-eq
-not
-not
-if-goto Memory.deAlloc$16
-push local 2
+push local 0
 push static 0
 push local 2
+push constant 1
+add
+add
+pop pointer 1
+pop that 0
+label Memory.deAlloc$13
+push local 1
+push static 0
+push local 0
+push constant 1
+add
+add
+pop pointer 1
+pop that 0
+push local 0
+push static 0
+push local 0
 add
 pop pointer 1
 push that 0
 add
-push local 0
+push local 1
 eq
-goto Memory.deAlloc$17
-label Memory.deAlloc$16
-push constant 0
-label Memory.deAlloc$17
 not
 if-goto Memory.deAlloc$14
 push static 0
-push local 2
-add
-pop pointer 1
-push that 0
-push static 0
 push local 0
 add
 pop pointer 1
 push that 0
+push static 0
+push local 1
+add
+pop pointer 1
+push that 0
 add
 push static 0
-push local 2
+push local 0
 add
 pop pointer 1
 pop that 0
 push static 0
-push local 0
+push local 1
 push constant 1
 add
 add
 pop pointer 1
 push that 0
 push static 0
-push local 2
+push local 0
 push constant 1
 add
 add
 pop pointer 1
 pop that 0
 label Memory.deAlloc$14
+push local 2
+push constant 1
+neg
+eq
+not
+not
+if-goto Memory.deAlloc.skipShortCircuit$18
+push local 2
+push static 0
+push local 2
+add
+pop pointer 1
+push that 0
+add
+push local 0
+eq
+goto Memory.deAlloc.endShortCircuit$19
+label Memory.deAlloc.skipShortCircuit$18
+push constant 0
+label Memory.deAlloc.endShortCircuit$19
+not
+if-goto Memory.deAlloc$16
+push static 0
+push local 2
+add
+pop pointer 1
+push that 0
+push static 0
+push local 0
+add
+pop pointer 1
+push that 0
+add
+push static 0
+push local 2
+add
+pop pointer 1
+pop that 0
+push static 0
+push local 0
+push constant 1
+add
+add
+pop pointer 1
+push that 0
+push static 0
+push local 2
+push constant 1
+add
+add
+pop pointer 1
+pop that 0
+label Memory.deAlloc$16
 push constant 0
 return

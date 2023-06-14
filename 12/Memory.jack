@@ -116,7 +116,7 @@ class Memory {
         // add block to freeList
         let next = freeRoot;
         let previous = -1;
-        while ((next != -1) & (next < blockAddress)) {
+        while ((next != -1) && (next < blockAddress)) {
             let previous = next;
             let next = mem[next + 1];
         }
