@@ -28,21 +28,18 @@ public class CompilerVisitor
     private void raise(@NotNull String message,
                        @NotNull ParserRuleContext ctx)
     {
-
         throw new IllegalArgumentException(message + " at " + ctx.getText());
     }
 
     private void warn(@NotNull String message,
                       @NotNull ParserRuleContext ctx)
     {
-
         System.out.println(message + " at " + ctx.getText());
     }
 
     @Override
     public Type visitClass(JackParser.ClassContext ctx)
     {
-
         classInfo = new ClassInfo(ctx.ID().getText());
         visitChildren(ctx);
         return Type.of(classInfo.name());
@@ -51,7 +48,6 @@ public class CompilerVisitor
     @Override
     public Type visitStaticVarDec(JackParser.StaticVarDecContext ctx)
     {
-
         requireNonNull(classInfo);
         mustBeNull(varScope);
         varScope = VarScope.STATIC;
@@ -63,7 +59,6 @@ public class CompilerVisitor
     @Override
     public Type visitFieldVarDec(JackParser.FieldVarDecContext ctx)
     {
-
         requireNonNull(classInfo);
         mustBeNull(varScope);
         varScope = VarScope.FIELD;
@@ -75,7 +70,6 @@ public class CompilerVisitor
     @Override
     public Type visitSubroutineDec(JackParser.SubroutineDecContext ctx)
     {
-
         requireNonNull(classInfo);
         mustBeNull(subroutineInfo);
 
@@ -132,7 +126,6 @@ public class CompilerVisitor
     @Override
     public Type visitParameter(JackParser.ParameterContext ctx)
     {
-
         requireNonNull(subroutineInfo);
         Type type = visitType(ctx.type()); // determine the type
 
@@ -147,7 +140,6 @@ public class CompilerVisitor
     @Override
     public Type visitLocalVarDec(JackParser.LocalVarDecContext ctx)
     {
-
         mustBeNull(varScope);
         varScope = VarScope.LOCAL;
         Type type = visitVarDec(ctx.varDec());
@@ -158,7 +150,6 @@ public class CompilerVisitor
     @Override
     public Type visitVarDec(JackParser.VarDecContext ctx)
     {
-
         requireNonNull(classInfo);
         requireNonNull(varScope);
         if (varScope == VarScope.LOCAL) {
@@ -185,7 +176,6 @@ public class CompilerVisitor
     @Override
     public Type visitType(JackParser.TypeContext ctx)
     {
-
         if (ctx.INT() != null) {
             return PrimitiveType.INT;
         } else if (ctx.CHAR() != null) {
@@ -200,7 +190,6 @@ public class CompilerVisitor
     @Override
     public Object visitAssignVariable(JackParser.AssignVariableContext ctx)
     {
-
         VarInfo varInfo = visitVarUse(ctx.varUse());
         Type varType = varInfo.type();
         Type expressionType = (Type) visitExpression(ctx.expression());
@@ -248,7 +237,6 @@ public class CompilerVisitor
     @Override
     public Type visitIfStatement(JackParser.IfStatementContext ctx)
     {
-
         String elseLabel = subroutineInfo.nextLabel();
         String afterLabel = subroutineInfo.nextLabel();
         Type expressionType = (Type) visitExpression(ctx.expression());
@@ -282,7 +270,6 @@ public class CompilerVisitor
     @Override
     public Type visitWhileStatement(JackParser.WhileStatementContext ctx)
     {
-
         String whileLabel = subroutineInfo.nextLabel();
         String afterLabel = subroutineInfo.nextLabel();
 
@@ -304,7 +291,6 @@ public class CompilerVisitor
     @Override
     public Type visitDoStatement(JackParser.DoStatementContext ctx)
     {
-
         visitSubroutineCall(ctx.subroutineCall());
         vmWriter.writePop(Segment.TEMP, 0);
         return null;
@@ -313,7 +299,6 @@ public class CompilerVisitor
     @Override
     public Type visitReturnStatement(JackParser.ReturnStatementContext ctx)
     {
-
         Type returnType = null;
         if (ctx.expression() != null) {
             returnType = (Type) visitExpression(ctx.expression());
@@ -337,7 +322,6 @@ public class CompilerVisitor
     @Override
     public Type visitCombination(JackParser.CombinationContext ctx)
     {
-
         TerminalNode op = null;
         Type type = null, previousType = null;
         int childCount = ctx.getChildCount();
@@ -386,7 +370,6 @@ public class CompilerVisitor
     @Override
     public Type visitEquality(JackParser.EqualityContext ctx)
     {
-
         TerminalNode op = null;
         Type previousType = null;
         int childCount = ctx.getChildCount();
@@ -419,7 +402,6 @@ public class CompilerVisitor
     @Override
     public Type visitComparison(JackParser.ComparisonContext ctx)
     {
-
         TerminalNode op = null;
         Type previousType = null;
         int childCount = ctx.getChildCount();
@@ -460,7 +442,6 @@ public class CompilerVisitor
     @Override
     public Type visitTerm(JackParser.TermContext ctx)
     {
-
         TerminalNode op = null;
         Type type = null;
         Type previousType = null;
@@ -501,7 +482,6 @@ public class CompilerVisitor
     @Override
     public Type visitFactor(JackParser.FactorContext ctx)
     {
-
         TerminalNode op = null;
         Type previousType = null;
         Type type = null;
@@ -546,7 +526,6 @@ public class CompilerVisitor
     @Override
     public Type visitUnary(JackParser.UnaryContext ctx)
     {
-
         Type type = (Type) visitChildren(ctx);
         if (type == null) {
             raise("An unary element must have a type", ctx);
@@ -568,7 +547,6 @@ public class CompilerVisitor
     @Override
     public Type visitPrimary(JackParser.PrimaryContext ctx)
     {
-
         if (ctx.expression() != null) {
             return (Type) visitExpression(ctx.expression());
         } else if (ctx.subroutineCall() != null) {
@@ -622,7 +600,6 @@ public class CompilerVisitor
     @NotNull
     public VarInfo visitVarUse(JackParser.VarUseContext ctx)
     {
-
         String varName = ctx.ID().getText();
         if (ctx.THIS() != null) {
             VarInfo result = classInfo.findVar(varName);
@@ -641,7 +618,6 @@ public class CompilerVisitor
     @Override
     public Type visitArrayReferencing(JackParser.ArrayReferencingContext ctx)
     {
-
         String varName = ctx.ID().getText();
         VarInfo varInfo = getVarInfo(ctx, varName);
         if (varInfo.type() != Array.INSTANCE) {
@@ -666,7 +642,6 @@ public class CompilerVisitor
     private VarInfo getVarInfo(ParserRuleContext ctx,
                                String varName)
     {
-
         VarInfo varInfo = subroutineInfo.findVar(varName);
         if (varInfo == null) {
             raise("Couldn't find variable " + varName, ctx);
@@ -677,7 +652,6 @@ public class CompilerVisitor
     @Override
     public Type visitCallLocal(JackParser.CallLocalContext ctx)
     {
-
         if (!subroutineInfo.scope().callFromLocal()) {
             raise("local calls can only be made from other methods", ctx);
         }
@@ -731,7 +705,6 @@ public class CompilerVisitor
 
     private static void mustBeNull(Object object)
     {
-
         if (object != null) {
             throw new IllegalArgumentException();
         }
