@@ -336,8 +336,8 @@ public class CompilerVisitor
                         raise("type is null", ctx);
                     }
                 } else {
-                    String skipLabel = subroutineInfo.nextLabel("skipShortCircuit");
-                    String endLabel = subroutineInfo.nextLabel("endShortCircuit");
+                    String skipLabel = subroutineInfo.nextLabel("skipSC");
+                    String endLabel = subroutineInfo.nextLabel("endSC");
 
                     if (op.getSymbol().getType() == JackParser.SHORT_AND) {
                         vmWriter.writeArithmetic(Command.NOT);
@@ -496,10 +496,6 @@ public class CompilerVisitor
                     raise("A factor element must have a type", ctx);
                 }
                 if (op != null) {
-                    type = visitUnary((JackParser.UnaryContext) ctx.getChild(i));
-                    if (type == null) {
-                        raise("A factor element must have a type", ctx);
-                    }
                     if (op.getSymbol().getType() == JackParser.AND) {
                         // types must not be UserType and should be compatible
                         if (type instanceof UserType || previousType instanceof UserType) {

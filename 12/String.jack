@@ -19,15 +19,16 @@ class String {
     /** constructs a new empty string with a maximum length of maxLength
      *  and initial length of 0. */
     constructor String new(int maxLength) {
-        let value = Array.new(maxLength);
-        let this.maxLength = maxLength;
+        let value = Array.new(Math.max(1,maxLength));
+        let this.maxLength = Math.max(0, maxLength);
         let length = 0;
+        return this;
     }
 
     /** Disposes this string. */
     method void dispose() {
-        Memory.deAlloc(value);
-        Memory.deAlloc(this);
+        do Memory.deAlloc(value);
+        do Memory.deAlloc(this);
         return;
     }
 
@@ -73,31 +74,64 @@ class String {
     /** Returns the integer value of this string, 
      *  until a non-digit character is detected. */
     method int intValue() {
-        // TODO
-        return 0;
+
+        var int i, j, val;
+
+        if (length > 0 && value[0] == 45) {
+            let i = 1; // start at second char
+        }
+        while (i < length) {
+            let j = value[i] - 48; // digits start at 48
+            if (j < 10 && j >= 0) {
+                let val = 10 * val + j;
+            } else {
+                let j = length;
+            }
+            let i = i + 1;
+        }
+        if (value[0] == 45) {
+            return -val;
+        }
+        return val;
     }
 
     /** Sets this string to hold a representation of the given value. */
     method void setInt(int val) {
-        // TODO
+
+        let length = 0;
+        if (val < 0) {
+            do appendChar(45);
+            do doSetInt(-val);
+        } else {
+            do doSetInt(val);
+        }
+        return;
+    }
+
+    method void doSetInt(int val) {
+
+        var int d, r;
+        let d = val / 10;
+        let r = val - 10 * d;
+        if (d > 0) {
+            do doSetInt(d);
+        }
+        do appendChar(r + 48);
         return;
     }
 
     /** Returns the new line character. */
     function char newLine() {
-        // TODO
-        return 0;
+        return 128;
     }
 
     /** Returns the backspace character. */
     function char backSpace() {
-        // TODO
-        return 0;
+        return 129;
     }
 
     /** Returns the double quote (") character. */
     function char doubleQuote() {
-        // TODO
-        return 0;
+        return 34;
     }
 }
