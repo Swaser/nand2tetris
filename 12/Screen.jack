@@ -11,33 +11,211 @@
  */
 class Screen {
 
+    static Array screen;
+    static Array masks;
+    static boolean color;
+
     /** Initializes the Screen. */
     function void init() {
+
+        // set the base address of the screen array
+        let screen = 16384;
+        // start with a white screen
+        do Screen.clearScreen();
+        // start with black color
+        let color = true;
+
+        // set up masks
+        let masks = Array.new(16);
+        let masks[0] = 1;
+        let masks[1] = 2;
+        let masks[2] = 4;
+        let masks[3] = 8;
+        let masks[4] = 16;
+        let masks[5] = 32;
+        let masks[6] = 64;
+        let masks[7] = 128;
+        let masks[8] = 256;
+        let masks[9] = 512;
+        let masks[10] = 1024;
+        let masks[11] = 2048;
+        let masks[12] = 4096;
+        let masks[13] = 8192;
+        let masks[14] = 16384;
+        let masks[15] = 16384 + 16384;
+        return;
     }
 
     /** Erases the entire screen. */
     function void clearScreen() {
+        var int x, y;
+        while (y < 256) {
+            while (x < 32) {
+                let screen[y*32+x] = 0;
+                let x = x + 1;
+            }
+            let x = 0;
+            let y = y + 1;
+        }
+        return;
     }
 
     /** Sets the current color, to be used for all subsequent drawXXX commands.
      *  Black is represented by true, white by false. */
     function void setColor(boolean b) {
+        let color = b;
+        return;
     }
 
     /** Draws the (x,y) pixel, using the current color. */
     function void drawPixel(int x, int y) {
+
+        var int col, address, value;
+
+        let col = x / 16;
+        let address = y * 32 + col;
+        let value = screen[address];
+        if (color) {
+            // make it black -> | mask
+            let value = value | masks[x - col * 16]; // x - col * 16 is modulo
+        } else {
+            // make it white -> & inverse of mask
+            let value = value & !masks[x - col * 16]; // x - col * 16 is modulo
+        }
+        let screen[address] = value;
+        return;
     }
 
     /** Draws a line from pixel (x1,y1) to pixel (x2,y2), using the current color. */
     function void drawLine(int x1, int y1, int x2, int y2) {
+
+        var int dx, dy;
+        var int a, b, diff;
+
+        let dx = x2 - x1;
+        if (dx == 0) {
+
+            if (y1 > y2) {
+                do Screen.drawLine(x2, y2, x1, y1);
+                return;
+            }
+            while (y1 <= y2) {
+                do Screen.drawPixel(x1, y1);
+                let y1 = y1 + 1;
+            }
+            return;
+        }
+
+        if (dx < 0) {
+
+            // make sure dx is positive
+            do Screen.drawLine(x2,y2,x1,y1);
+            return;
+        }
+
+        let dy = y2 - y1;
+        if (dy == 0) {
+            do Screen.drawHorizontal(y1, x1, x2);
+            return;
+        }
+
+        if (dy > 0) {
+            while (a <= dx && b <= dy) {
+                do Screen.drawPixel(x1+a, y1+b);
+                if (diff < 0) {
+                    let a = a + 1;
+                    let diff = diff + dy;
+                } else {
+                    let b = b + 1;
+                    let diff = diff - dx;
+                }
+            }
+        } else {
+            // dy must be < 0
+            while (a <= dx && b >= dy) {
+                do Screen.drawPixel(x1+a, y1+b);
+                if (diff < 0) {
+                    let a = a + 1;
+                    let diff = diff - dy;
+                } else {
+                    let b = b - 1;
+                    let diff = diff - dx;
+                }
+            }
+        }
+
+        return;
+    }
+
+    /** draw horizonal line from (x,y) to the right dx pixel (so dx+1 pixel in total) */
+    function void drawHorizontal(int y, int x1, int x2) {
+
+        var int i, lw, lr, rw, rr, address;
+
+        if (x2 - x1 >= 32) {
+            let lw = x1 / 16;
+            let lr = x1 - lw * 16;
+            let rw = x2 / 16;
+            let rr = x2 - rw * 16;
+            if (lr > 0) {
+                do Screen.drawHorizontalSlow(y, x1, x1+lr);
+                let lw = lw + 1;
+            }
+            if (rr == 15) {
+                let rw = rw + 1;
+            } else {
+                do Screen.drawHorizontalSlow(y, x2 - lr, x2);
+            }
+            let address = y*32+lw;
+            while (lw <= rw) {
+                if (color) {
+                    let screen[address] = -1;
+                } else {
+                    let screen[address] = 0;
+                }
+                let lw = lw + 1;
+                let address = address + 1;
+            }
+            return;
+        }
+
+        do Screen.drawHorizontalSlow(y, x1, x2);
+        return;
+    }
+
+    function void drawHorizontalSlow(int y, int x1, int x2) {
+
+        while (x1 <= x2) {
+            do Screen.drawPixel(x1, y);
+            let x1 = x1 + 1;
+        }
+        return;
     }
 
     /** Draws a filled rectangle whose top left corner is (x1, y1)
      * and bottom right corner is (x2,y2), using the current color. */
     function void drawRectangle(int x1, int y1, int x2, int y2) {
+
+        while (y1 <= y2) {
+            do Screen.drawLine(x1, y1, x2, y1);
+            let y1 = y1 + 1;
+        }
+        return;
     }
 
     /** Draws a filled circle of radius r<=181 around (x,y), using the current color. */
     function void drawCircle(int x, int y, int r) {
+
+        var int i, d, r2;
+
+        let r2 = r * r;
+        let i = r - 1;
+        while (i >= 0) {
+            let d = Math.sqrt(r2 - i * i);
+            do Screen.drawLine(x-d, y+i, x+d, y+i);
+            do Screen.drawLine(x-d, y-i, x+d, y-i);
+            let i = i - 1;
+        }
+        return;
     }
 }
