@@ -150,30 +150,30 @@ class Screen {
     /** draw horizonal line from (x,y) to the right dx pixel (so dx+1 pixel in total) */
     function void drawHorizontal(int y, int x1, int x2) {
 
-        var int i, lw, lr, rw, rr, address;
+        var int i, l1, r1, l2, r2, address;
 
         if (x2 - x1 >= 32) {
-            let lw = x1 / 16;
-            let lr = x1 - lw * 16;
-            let rw = x2 / 16;
-            let rr = x2 - rw * 16;
-            if (lr > 0) {
-                do Screen.drawHorizontalSlow(y, x1, x1+lr);
-                let lw = lw + 1;
+            let l1 = x1 / 16;
+            let r1 = x1 - l1 * 16;
+            let l2 = x2 / 16;
+            let r2 = x2 - l2 * 16;
+
+            if (r1 > 0) {
+                let l1 = l1 + 1;
+                do Screen.drawHorizontalSlow(y, x1, x1 + 15 - r1);
             }
-            if (rr == 15) {
-                let rw = rw + 1;
-            } else {
-                do Screen.drawHorizontalSlow(y, x2 - lr, x2);
+            if (r2 < 15) {
+                let l2 = l2 - 1;
+                do Screen.drawHorizontalSlow(y, x2 - r2, x2);
             }
-            let address = y*32+lw;
-            while (lw <= rw) {
+            let address = y * 32 + l1;
+            while (l1 <= l2) {
                 if (color) {
                     let screen[address] = -1;
                 } else {
                     let screen[address] = 0;
                 }
-                let lw = lw + 1;
+                let l1 = l1 + 1;
                 let address = address + 1;
             }
             return;
@@ -197,7 +197,7 @@ class Screen {
     function void drawRectangle(int x1, int y1, int x2, int y2) {
 
         while (y1 <= y2) {
-            do Screen.drawLine(x1, y1, x2, y1);
+            do Screen.drawHorizontal(y1, x1, x2);
             let y1 = y1 + 1;
         }
         return;
@@ -212,8 +212,8 @@ class Screen {
         let i = r - 1;
         while (i >= 0) {
             let d = Math.sqrt(r2 - i * i);
-            do Screen.drawLine(x-d, y+i, x+d, y+i);
-            do Screen.drawLine(x-d, y-i, x+d, y-i);
+            do Screen.drawHorizontal(y+i, x-d, x+d);
+            do Screen.drawHorizontal(y-i, x-d, x+d);
             let i = i - 1;
         }
         return;
