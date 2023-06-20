@@ -13,15 +13,23 @@ class Math {
 
     /** Initializes the library. */
     function void init() {
-        let ps = Array.new(8);
-        let ps[0] =   1;   // 2^0
-        let ps[1] =   2;   // 2^1
-        let ps[2] =   4;   // 2^2
-        let ps[3] =   8;   // 2^3
-        let ps[4] =  16;   // 2^4
-        let ps[5] =  32;   // 2^5
-        let ps[6] =  64;   // 2^6
-        let ps[7] = 128;   // 2^7
+        let ps = Array.new(16);
+        let ps[ 0] =     1;
+        let ps[ 1] =     2;
+        let ps[ 2] =     4;
+        let ps[ 3] =     8;
+        let ps[ 4] =    16;
+        let ps[ 5] =    32;
+        let ps[ 6] =    64;
+        let ps[ 7] =   128;
+        let ps[ 8] =   256;
+        let ps[ 9] =   512;
+        let ps[10] =  1024;
+        let ps[11] =  2048;
+        let ps[12] =  4096;
+        let ps[13] =  8192;
+        let ps[14] = 16384;
+        let ps[15] = -32767 - 1; // 2^15 = 0b1000_0000_0000_0000 = -32768 signed
         return;
     }
 
@@ -39,20 +47,21 @@ class Math {
      *  the Jack expressions x*y and multiply(x,y) return the same value.
      */
     function int multiply(int x, int y) {
+
         var int sum, shiftedX, i, mask;
-        let sum = 0;
-        let i = 0;
+
         let shiftedX = x;
-        let mask = 1;
+
         while (i < 16) {
+            let mask = ps[i];
             // the i-th bit is set
             if ((mask & y) == mask) {
                 let sum = sum + shiftedX;
             }
             let shiftedX = shiftedX + shiftedX;
-            let mask = mask + mask;
             let i = i + 1;
         }
+
         return sum;
     }
 
@@ -84,16 +93,15 @@ class Math {
         var int y, j, p, t, t2;
 
         let j = 7;    // n/2 - 1
-        let p = ps[7];
-        let y = 0;
+
         while (j >= 0) {
+            let p = ps[j];
             let t = y + p;
             let t2 = Math.multiply(t,t); // negative if overflow
             if ((t2 > 0) && (t2 <= x)) {
                 let y = t;
             }
             let j = j - 1;
-            let p = ps[j];
         }
         return y;
     }
